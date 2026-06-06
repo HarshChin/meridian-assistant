@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import pytest
+from app.fixtures import load_technician_roster
 from app.main import create_app
 from app.schemas import CreateBookingRequest, ModifyRequest
 from app.seed import build_seed_store
-from app.service import LATE_CANCEL_FEE, NO_SHOW_FEE, BookingService, cancellation_fee
+from app.service import BookingService, cancellation_fee
 from fastapi.testclient import TestClient
 
 from meridian.clock import CANONICAL_NOW, EASTERN, FrozenClock
@@ -37,10 +38,10 @@ def client() -> TestClient:
 # --------------------------------------------------------------------- fees (pure)
 def test_cancellation_fee_boundaries() -> None:
     assert cancellation_fee(25) == 0
-    assert cancellation_fee(24.0) == LATE_CANCEL_FEE  # exactly 24h -> $35
-    assert cancellation_fee(2.0) == LATE_CANCEL_FEE  # exactly 2h -> $35
-    assert cancellation_fee(1.99) == NO_SHOW_FEE
-    assert cancellation_fee(-3) == NO_SHOW_FEE  # no-show
+    assert cancellation_fee(24.0) == 35  # exactly the free-notice boundary -> late fee
+    assert cancellation_fee(2.0) == 35  # exactly the late-cancel boundary -> late fee
+    assert cancellation_fee(1.99) == 75
+    assert cancellation_fee(-3) == 75  # no-show
 
 
 def test_cancel_more_than_24h_is_free() -> None:
@@ -61,7 +62,7 @@ def test_cancel_under_2h_uses_waiver_when_available() -> None:
 def test_cancel_under_2h_charges_75_when_waiver_used() -> None:
     svc = _svc_at(datetime(2026, 1, 20, 13, 0, tzinfo=EASTERN))
     resp = svc.modify_booking("BK-00477777", ModifyRequest(action=ModifyAction.CANCEL))
-    assert resp.fee_applied == float(NO_SHOW_FEE)
+    assert resp.fee_applied == 75.0
     assert resp.waiver_used is False
 
 
@@ -90,7 +91,7 @@ def test_same_day_reschedule_to_next_week_is_a_late_cancel() -> None:
             action=ModifyAction.RESCHEDULE, new_date=date(2026, 1, 27), new_window=Window.MORNING
         ),
     )
-    assert resp.fee_applied == float(NO_SHOW_FEE)
+    assert resp.fee_applied == 75.0
 
 
 def test_same_day_move_is_free() -> None:
@@ -121,6 +122,12 @@ def test_create_is_idempotent_and_records_one_mutation() -> None:
     assert first.status is CreateStatus.CONFIRMED
     assert first.booking_id == second.booking_id  # deduped
     assert [m.op for m in svc.store.mutations] == ["create"]
+
+
+def test_seed_tech_names_are_in_roster() -> None:
+    roster = set(load_technician_roster())
+    seeded = {"Marcus Webb", "Dana Reyes", "Priya Shah", "Luis Ortega", "Sam Whitfield"}
+    assert seeded <= roster
 
 
 # ----------------------------------------------------------------------- HTTP layer

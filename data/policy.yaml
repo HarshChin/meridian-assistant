@@ -1,0 +1,55 @@
+# Meridian business POLICY values — the single source of truth for the numbers.
+#
+# The deterministic LOGIC that applies these lives in code (src/meridian/knowledge/fees.py,
+# src/meridian/windows.py, app/service.py); only the values live here, so there is no
+# drift from the knowledge pack and a clean hook for per-branch overrides in production.
+# Each group is tagged with its source document.
+version: "1.0"
+
+# source: 07_cancellation_policy.pdf v2.0
+cancellation:
+  free_notice_hours: 24            # > 24h notice -> no fee
+  late_cancel_threshold_hours: 2   # 2-24h -> late-cancel fee; < 2h / no-show -> no-show fee
+  late_cancel_fee_usd: 35
+  no_show_fee_usd: 75
+  no_show_waiver_period_months: 12 # the $75 fee is waived once per 12 months per customer
+
+# source: 03_hvac_pricing.pdf v3.0 (plumbing states "after-hours same as HVAC policy")
+surcharges:
+  weekday_after_hours_usd: 75      # Mon-Sat before 07:00 or at/after 18:00
+  sunday_holiday_usd: 125          # Sundays and US federal holidays
+  business_hours_start_hour: 7
+  business_hours_end_hour: 18
+
+# source: 03_hvac_pricing.pdf, 04_plumbing_pricing.pdf, 05_electrical_pricing.pdf
+diagnostic_fees_usd:
+  hvac: 89          # waived if a repair is booked the same day
+  electrical: 85
+  plumbing: 75
+
+# source: 04_plumbing_pricing.pdf v2.5 (only plumbing documents an emergency dispatch fee)
+emergency_dispatch_fees_usd:
+  plumbing: 99
+
+# source: 12_booking_api_spec.pdf v1.0
+booking:
+  max_advance_days: 60
+  notes_max_length: 500
+  windows:                         # preferred_window -> [start, end] band (HH:MM)
+    morning: ["07:00", "11:00"]
+    midday: ["11:00", "14:00"]
+    afternoon: ["14:00", "18:00"]
+
+# Minimal US federal-holiday set for 2026 (documented simplification — see ASSUMPTIONS.md).
+federal_holidays:
+  - "2026-01-01"   # New Year's Day
+  - "2026-01-19"   # MLK Jr. Day
+  - "2026-02-16"   # Presidents' Day
+  - "2026-05-25"   # Memorial Day
+  - "2026-06-19"   # Juneteenth
+  - "2026-07-04"   # Independence Day
+  - "2026-09-07"   # Labor Day
+  - "2026-10-12"   # Columbus Day
+  - "2026-11-11"   # Veterans Day
+  - "2026-11-26"   # Thanksgiving
+  - "2026-12-25"   # Christmas

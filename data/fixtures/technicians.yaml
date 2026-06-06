@@ -1,0 +1,9 @@
+# Synthetic technician roster for the mock Booking API (NOT a knowledge-pack fact).
+# Used for deterministic tech assignment on newly-created bookings; the seed fixtures
+# reuse these names (a test asserts the seed names are a subset of this roster).
+roster:
+  - Marcus Webb
+  - Dana Reyes
+  - Priya Shah
+  - Luis Ortega
+  - Sam Whitfield

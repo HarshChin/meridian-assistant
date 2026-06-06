@@ -1,9 +1,10 @@
 """BookingService — the single source of truth for booking business logic.
 
 Wraps a :class:`BookingStore` with the doc-12 contract and the verified fee/window/
-coverage rules. Used directly as the in-process double (tools + eval) and behind the
-FastAPI app. All time-dependent logic uses the injected :class:`Clock` — never the
-wall clock — so fees and windows are deterministic.
+coverage rules. Fee VALUES come from ``data/policy.yaml`` (see ``meridian.policy``);
+this module holds the deterministic logic that applies them. Used directly as the
+in-process double (tools + eval) and behind the FastAPI app. All time-dependent logic
+uses the injected :class:`Clock` — never the wall clock — so fees/windows are deterministic.
 """
 
 from __future__ import annotations
@@ -24,13 +25,15 @@ from meridian.domain.enums import (
 from meridian.domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
 from meridian.knowledge import branches
 from meridian.knowledge.coverage import check_coverage
+from meridian.policy import get_policy
 from meridian.windows import (
-    MAX_ADVANCE_DAYS,
+    SUNDAY,
     appointment_window,
     resolve_first_available,
     within_advance_window,
 )
 
+from .fixtures import load_technician_roster
 from .schemas import (
     CreateBookingRequest,
     CreateBookingResponse,
@@ -40,16 +43,12 @@ from .schemas import (
 )
 from .store import BookingRecord, BookingStore
 
-LATE_CANCEL_FEE = 35
-NO_SHOW_FEE = 75
-_TECH_ROSTER = ("Marcus Webb", "Dana Reyes", "Priya Shah", "Luis Ortega", "Sam Whitfield")
-
 
 def cancellation_fee(notice_hours: float) -> int:
     """Fee (before any waiver) for cancelling with ``notice_hours`` of notice.
 
-    Per doc 07: more-than-24h → $0; 2-24h → $35; less-than-2h or no-show → $75.
-    Boundary convention: exactly 24h → $35; exactly 2h → $35.
+    Thresholds and amounts come from ``data/policy.yaml`` (doc 07). Boundary convention:
+    exactly the free-notice boundary (24h) and the late-cancel boundary (2h) → late fee.
 
     Args:
         notice_hours: Hours of notice before the appointment (negative = no-show).
@@ -57,11 +56,12 @@ def cancellation_fee(notice_hours: float) -> int:
     Returns:
         The fee in whole USD.
     """
-    if notice_hours > 24:
+    policy = get_policy().cancellation
+    if notice_hours > policy.free_notice_hours:
         return 0
-    if notice_hours >= 2:
-        return LATE_CANCEL_FEE
-    return NO_SHOW_FEE
+    if notice_hours >= policy.late_cancel_threshold_hours:
+        return policy.late_cancel_fee_usd
+    return policy.no_show_fee_usd
 
 
 class BookingService:
@@ -83,7 +83,8 @@ class BookingService:
         now = self._clock.now()
         if not within_advance_window(req.preferred_date, now):
             raise InvalidInputError(
-                f"preferred_date must be within {MAX_ADVANCE_DAYS} days (got {req.preferred_date})."
+                f"preferred_date must be within {get_policy().booking.max_advance_days} days "
+                f"(got {req.preferred_date})."
             )
 
         key = self._idempotency_key(req)
@@ -182,12 +183,14 @@ class BookingService:
         now = self._clock.now()
         if not within_advance_window(req.new_date, now):
             raise InvalidInputError(
-                f"new_date must be within {MAX_ADVANCE_DAYS} days (got {req.new_date})."
+                f"new_date must be within {get_policy().booking.max_advance_days} days "
+                f"(got {req.new_date})."
             )
         notice_hours = self._notice_hours(rec, now)
         fee, waiver_used = 0, False
-        # >24h notice is free; otherwise a same-day move is free, else it is a late-cancel.
-        if notice_hours <= 24 and req.new_date != now.date():
+        free_hours = get_policy().cancellation.free_notice_hours
+        # >free-notice is free; otherwise a same-day move is free, else it is a late-cancel.
+        if notice_hours <= free_hours and req.new_date != now.date():
             fee, waiver_used = self._fee_with_waiver(rec.owner_id, notice_hours)
         window = self._resolve_window(req.new_window, req.new_date, rec.assigned_branch)
         rec.appointment_window = window
@@ -217,7 +220,9 @@ class BookingService:
     def _fee_with_waiver(self, owner_id: str | None, notice_hours: float) -> tuple[int, bool]:
         """Compute the fee, applying the once-per-12-months no-show waiver if available."""
         base = cancellation_fee(notice_hours)
-        if base == NO_SHOW_FEE and self._store.waiver_available(owner_id):
+        if base == get_policy().cancellation.no_show_fee_usd and self._store.waiver_available(
+            owner_id
+        ):
             self._store.consume_waiver(owner_id)
             return 0, True
         return base, False
@@ -235,15 +240,18 @@ class BookingService:
         if window is Window.FIRST_AVAILABLE:
 
             def _open(candidate: date) -> bool:
-                return branches.is_open(branch, candidate) if branch else candidate.weekday() != 6
+                if branch:
+                    return branches.is_open(branch, candidate)
+                return candidate.weekday() != SUNDAY
 
             return resolve_first_available(self._clock.now(), is_open=_open)
         return appointment_window(window, day)
 
     def _assign_tech(self, booking_id: str) -> str:
-        """Deterministically assign a technician from the roster."""
-        ordinal = int(booking_id.split("-")[1])
-        return _TECH_ROSTER[ordinal % len(_TECH_ROSTER)]
+        """Deterministically assign a technician from the mock roster fixture."""
+        roster = load_technician_roster()
+        ordinal = int(booking_id.rsplit("-", 1)[-1])
+        return roster[ordinal % len(roster)]
 
     def _idempotency_key(self, req: CreateBookingRequest) -> str:
         """Stable key to dedupe identical create requests (closes the double-confirm race)."""
