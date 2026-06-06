@@ -1,0 +1,7 @@
+{
+  "free_notice_hours": 24,
+  "late_cancel_threshold_hours": 2,
+  "late_cancel_fee_usd": 35,
+  "no_show_fee_usd": 75,
+  "no_show_waiver_period_months": 12
+}

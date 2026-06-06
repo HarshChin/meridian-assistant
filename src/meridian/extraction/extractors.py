@@ -16,24 +16,55 @@ from pydantic import BaseModel, Field
 
 from ..domain.enums import ServiceType
 from ..llm.client import LLMClient
+from ..logging_setup import get_logger
 from ..retrieval.retriever import HybridRetriever
 from .schemas import BranchDirectory, FeeSchedule, ServiceAreaExtraction
 
+_LOG = get_logger(__name__)
 
-def _gather_top_docs(retriever: HybridRetriever, query: str, n_docs: int) -> tuple[str, list[str]]:
-    """Rank documents by their retrieved chunks; return (full-text context, doc ids).
+# Document selection is RELATIVE, never a fixed count, so the number of documents extracted
+# scales with how many are genuinely relevant — no per-corpus constant, so adding documents
+# needs no code change. A document is kept if EITHER signal fires:
+#   (1) its aggregated chunk relevance reaches this fraction of the most-relevant document's, OR
+_DOC_RELEVANCE_RATIO = 0.5
+#   (2) it has a single chunk this strongly on-topic (dense cosine) — this catches a
+#       strong-but-singular match (e.g. one fee stated in an FAQ) that a higher-volume document
+#       would otherwise mask in the aggregate. Calibrated above the observed noise ceiling.
+_STRONG_COSINE = 0.75
+# Generous candidate pool so a relevant document is never buried below the cut by corpus size.
+_CANDIDATE_CHUNKS = 30
+# Safety bound on a single extraction's context (logged, not silent). Beyond this, shard the
+# capability per entity (as fees do per service line) rather than widening one call.
+_MAX_DOCS = 12
 
-    The document set is sorted deterministically so the extraction prompt — and therefore the
-    LLM cache key — is stable across runs.
+
+def _gather(retriever: HybridRetriever, query: str) -> tuple[str, list[str]]:
+    """Select the documents relevant to ``query`` (relative score OR strong match) + full text.
+
+    Retrieves a generous candidate pool, then keeps a document if its aggregated chunk relevance
+    is within :data:`_DOC_RELEVANCE_RATIO` of the most relevant document OR it has a chunk at or
+    above :data:`_STRONG_COSINE` — never a fixed top-N. Documents are sorted deterministically so
+    the extraction prompt (and its LLM cache key) is stable across runs.
     """
-    results, _ = retriever.search(query, k=max(12, n_docs * 4))
-    doc_scores: dict[str, float] = {}
+    results, _ = retriever.search(query, k=_CANDIDATE_CHUNKS, candidate_k=_CANDIDATE_CHUNKS)
+    aggregate: dict[str, float] = {}
+    best_cosine: dict[str, float] = {}
     for rank, rc in enumerate(results):
-        doc_scores[rc.chunk.doc_id] = doc_scores.get(rc.chunk.doc_id, 0.0) + 1.0 / (rank + 1)
-    top_docs = sorted(sorted(doc_scores, key=lambda d: -doc_scores[d])[:n_docs])
-    chunks = [c for doc in top_docs for c in retriever.doc_chunks(doc)]
+        doc = rc.chunk.doc_id
+        aggregate[doc] = aggregate.get(doc, 0.0) + 1.0 / (rank + 1)
+        best_cosine[doc] = max(best_cosine.get(doc, 0.0), rc.dense_cosine)
+    if not aggregate:
+        return "", []
+    cutoff = _DOC_RELEVANCE_RATIO * max(aggregate.values())
+    ranked = sorted(aggregate, key=lambda d: (-aggregate[d], d))
+    kept = [d for d in ranked if aggregate[d] >= cutoff or best_cosine[d] >= _STRONG_COSINE]
+    if len(kept) > _MAX_DOCS:
+        _LOG.warning("extraction.doc_cap_hit", query=query, relevant=len(kept), cap=_MAX_DOCS)
+        kept = kept[:_MAX_DOCS]
+    docs = sorted(kept)
+    chunks = [c for doc in docs for c in retriever.doc_chunks(doc)]
     context = "\n\n".join(f"[source: {c.citation()}]\n{c.text}" for c in chunks)
-    return context, top_docs
+    return context, docs
 
 
 # --------------------------------------------------------------------------------------
@@ -49,12 +80,13 @@ _COVERAGE_SYSTEM = """You extract service-area coverage from retrieved knowledge
 home-services company. Return structured data describing each county's coverage EXACTLY as \
 the text states it. Never invent counties, ZIPs, branches, or partners.
 
-The text was extracted from PDFs and may contain glyph artifacts:
-- A check mark (✓) commonly appears as the digit "3"  → treat as availability "available".
-- A cross/x mark (✗) commonly appears as the digit "7" → treat as "not_available".
-- Arrows or bullets may appear as "fi", "→", or stray characters — ignore them.
-Explicit WORDS always take precedence over symbols: text containing "Pending" → "pending"; \
-"Sub-contracted" → "subcontracted"; "not licensed" or "not available" → "not_available".
+Availability cells may use WORDS or SYMBOLS, and PDF extraction often garbles symbols:
+- An affirmative mark (a check "✓") may extract as "3", "Y", "P", or similar → "available".
+- A negative mark (a cross "✗"/"X") may extract as "7", "N", or an empty cell → "not_available".
+- Stray characters such as "fi", "→", or bullets are extraction noise — ignore them.
+Explicit WORDS always take precedence over symbols: "Available"/"Yes" → "available"; "Not \
+available"/"No"/"not licensed" → "not_available"; "Pending" → "pending"; "Sub-contracted" → \
+"subcontracted".
 
 For each county row of a coverage table:
 - Parse the ZIP column into integer inclusive [low, high] segments. A dash/en-dash range \
@@ -78,7 +110,7 @@ def extract_coverage(
     retriever: HybridRetriever, llm: LLMClient
 ) -> tuple[ServiceAreaExtraction, list[str]]:
     """Extract the service-area coverage record from the corpus."""
-    context, docs = _gather_top_docs(retriever, _COVERAGE_QUERY, 2)
+    context, docs = _gather(retriever, _COVERAGE_QUERY)
     return llm.structured(_COVERAGE_SYSTEM, context, ServiceAreaExtraction), docs
 
 
@@ -87,8 +119,8 @@ def extract_coverage(
 # --------------------------------------------------------------------------------------
 
 
-class _CoreFees(BaseModel):
-    """Company-wide cancellation + surcharge values (not per service line)."""
+class _CancellationFees(BaseModel):
+    """Cancellation / no-show fee values (from the cancellation policy document)."""
 
     free_notice_hours: int = Field(
         description="Cancellations with MORE notice than this many hours incur no fee."
@@ -102,6 +134,11 @@ class _CoreFees(BaseModel):
     no_show_waiver_period_months: int = Field(
         description="The no-show fee is waived once per this many months per customer."
     )
+
+
+class _SurchargeFees(BaseModel):
+    """After-hours / Sunday-holiday surcharge values (from the pricing document)."""
+
     weekday_after_hours_usd: int = Field(
         description="Surcharge for Mon-Sat calls before opening or at/after closing."
     )
@@ -110,33 +147,47 @@ class _CoreFees(BaseModel):
     business_hours_end_hour: int = Field(description="Hour (0-23) business hours end.")
 
 
-class _LineFees(BaseModel):
-    """Per-service-line fees, extracted one line at a time from that line's pricing text."""
+class _DiagnosticFee(BaseModel):
+    """The flat diagnostic / service-call fee for one service line."""
 
-    diagnostic_fee_usd: int = Field(
-        description="Flat diagnostic or service-call fee for this service line, in USD."
-    )
-    emergency_dispatch_fee_usd: int | None = Field(
-        default=None,
-        description="Emergency dispatch fee for this line ONLY if the text explicitly states "
-        "one for emergency/active-leak calls; otherwise null. A diagnostic or service-call "
-        "fee is NOT one.",
+    fee_usd: int = Field(
+        description="Flat 'Diagnostic Fee' or 'Service Call Fee' amount for this line, in USD."
     )
 
 
-_CORE_FEE_QUERY = (
-    "cancellation and no-show fees, notice period and once-per-period waiver, after-hours and "
-    "Sunday or federal-holiday surcharge, business opening and closing hours"
+class _EmergencyDispatchFees(BaseModel):
+    """Per-service-line emergency dispatch fees (often stated together in one document)."""
+
+    fees_usd: dict[str, int] = Field(
+        description="Map of service line (lowercase: hvac/plumbing/electrical) -> emergency "
+        "dispatch fee in USD, for EACH line the text explicitly gives one. Omit any line with "
+        "no stated emergency dispatch fee. A diagnostic/service-call fee is NOT one.",
+    )
+
+
+_CANCELLATION_QUERY = (
+    "cancellation and no-show fees, notice-period thresholds, once-per-period no-show waiver, "
+    "rescheduling fees"
 )
 
-_CORE_FEE_SYSTEM = """You compile a home-services company's company-wide cancellation and \
-surcharge fees from retrieved policy/pricing text. Extract only values the text states.
+_CANCELLATION_SYSTEM = """Extract a home-services company's CANCELLATION fee schedule from \
+retrieved policy text. Extract only values the text states.
 
 - free_notice_hours: notice threshold above which a cancellation is free \
 ("more than 24 hours" → 24).
 - late_cancel_threshold_hours: lower notice bound of the late-cancel band ("2 to 24 hours" → 2).
 - late_cancel_fee_usd / no_show_fee_usd: the two cancellation fee amounts.
-- no_show_waiver_period_months: the once-per-period waiver length ("once per 12-month period" → 12).
+- no_show_waiver_period_months: the once-per-period waiver length \
+("once per 12-month period" → 12)."""
+
+_SURCHARGE_QUERY = (
+    "after-hours surcharge, Sunday and federal-holiday surcharge, business opening and closing "
+    "hours, calls before 7 am or after 6 pm"
+)
+
+_SURCHARGE_SYSTEM = """Extract a home-services company's after-hours / Sunday-holiday SURCHARGE \
+schedule from retrieved pricing text. Extract only values the text states.
+
 - weekday_after_hours_usd: Mon-Sat before-open / after-close surcharge ("+$75 before 7 am or \
 after 6 pm" → 75).
 - sunday_holiday_usd: Sunday / federal-holiday surcharge \
@@ -144,16 +195,24 @@ after 6 pm" → 75).
 - business_hours_start_hour / business_hours_end_hour: 24-hour bounds implied by the surcharge \
 text ("before 7 am or after 6 pm" → start 7, end 18)."""
 
-_LINE_FEE_QUERY = "{line} diagnostic fee, {line} service call fee, {line} emergency dispatch fee"
+_DIAGNOSTIC_QUERY = "{line} diagnostic fee, {line} service call fee, flat fee amount"
 
-_LINE_FEE_SYSTEM = """You extract fees for the {line} service line from retrieved pricing text.
+_DIAGNOSTIC_SYSTEM = """Extract the flat diagnostic or service-call fee for the {line} service \
+line from retrieved pricing text. Treat "Diagnostic Fee" and "Service Call Fee" as the same \
+concept and return {line}'s amount only. Ignore other service lines and ignore emergency \
+dispatch fees."""
 
-- diagnostic_fee_usd: the flat "Diagnostic Fee" or "Service Call Fee" amount for {line} (treat \
-the two terms as the same concept).
-- emergency_dispatch_fee_usd: set this ONLY if the text explicitly states an "emergency dispatch \
-fee" for {line} (e.g. for active water leaks / emergency calls); otherwise null. A diagnostic or \
-service-call fee is NOT an emergency dispatch fee.
-Extract {line}'s values only — ignore other service lines that may appear in the text."""
+_EMERGENCY_QUERY = (
+    "emergency dispatch fee, emergency service dispatch, active water leak emergency, "
+    "after-hours emergency dispatch fees per service line plumbing HVAC"
+)
+
+_EMERGENCY_SYSTEM = """Extract EMERGENCY DISPATCH fees per service line from retrieved text. \
+Some documents state them together, e.g. "Emergency dispatch fees ($99 plumbing, $89 HVAC)". \
+Return fees_usd as a map of service line -> dollar amount for EVERY line the text explicitly \
+gives an emergency dispatch fee (lowercase keys: hvac, plumbing, electrical). A diagnostic or \
+service-call fee is NOT an emergency dispatch fee — do not include it. Omit any line with no \
+stated emergency dispatch fee."""
 
 
 def extract_fees(retriever: HybridRetriever, llm: LLMClient) -> tuple[FeeSchedule, list[str]]:
@@ -162,23 +221,38 @@ def extract_fees(retriever: HybridRetriever, llm: LLMClient) -> tuple[FeeSchedul
     Per-line fees (diagnostic, emergency dispatch) are compiled by iterating the known service
     lines with a targeted retrieval each, so completeness does not depend on every pricing
     document ranking in a single top-N — this is what lets it scale to many pricing documents.
+    Each fee concept is extracted from its own targeted retrieval (cancellation, surcharge, and
+    one per service line) rather than one broad query — so completeness never depends on several
+    differently-relevant documents all surfacing in a single top-N. An emergency-dispatch fee may
+    live in a different document than the line's pricing sheet (e.g. the emergencies FAQ), which
+    the relevance-gated selection picks up.
     """
-    core_ctx, core_docs = _gather_top_docs(retriever, _CORE_FEE_QUERY, 2)
-    core = llm.structured(_CORE_FEE_SYSTEM, core_ctx, _CoreFees)
+    used_docs: set[str] = set()
+
+    cancel_ctx, docs = _gather(retriever, _CANCELLATION_QUERY)
+    used_docs.update(docs)
+    cancellation = llm.structured(_CANCELLATION_SYSTEM, cancel_ctx, _CancellationFees)
+
+    surcharge_ctx, docs = _gather(retriever, _SURCHARGE_QUERY)
+    used_docs.update(docs)
+    surcharge = llm.structured(_SURCHARGE_SYSTEM, surcharge_ctx, _SurchargeFees)
 
     diagnostic: dict[str, int] = {}
-    emergency: dict[str, int] = {}
-    used_docs = set(core_docs)
     for line in ServiceType:
-        ctx, docs = _gather_top_docs(retriever, _LINE_FEE_QUERY.format(line=line.value), 2)
+        ctx, docs = _gather(retriever, _DIAGNOSTIC_QUERY.format(line=line.value))
         used_docs.update(docs)
-        line_fees = llm.structured(_LINE_FEE_SYSTEM.format(line=line.value), ctx, _LineFees)
-        diagnostic[line.value] = line_fees.diagnostic_fee_usd
-        if line_fees.emergency_dispatch_fee_usd is not None:
-            emergency[line.value] = line_fees.emergency_dispatch_fee_usd
+        diagnostic[line.value] = llm.structured(
+            _DIAGNOSTIC_SYSTEM.format(line=line.value), ctx, _DiagnosticFee
+        ).fee_usd
+
+    emer_ctx, docs = _gather(retriever, _EMERGENCY_QUERY)
+    used_docs.update(docs)
+    emergency_raw = llm.structured(_EMERGENCY_SYSTEM, emer_ctx, _EmergencyDispatchFees).fees_usd
+    emergency = {k.lower(): v for k, v in emergency_raw.items()}
 
     fees = FeeSchedule(
-        **core.model_dump(),
+        **cancellation.model_dump(),
+        **surcharge.model_dump(),
         diagnostic_fees_usd=diagnostic,
         emergency_dispatch_fees_usd=emergency,
     )
@@ -208,5 +282,5 @@ def extract_branches(
     retriever: HybridRetriever, llm: LLMClient
 ) -> tuple[BranchDirectory, list[str]]:
     """Extract the branch directory + emergency line from the corpus."""
-    context, docs = _gather_top_docs(retriever, _BRANCH_QUERY, 2)
+    context, docs = _gather(retriever, _BRANCH_QUERY)
     return llm.structured(_BRANCH_SYSTEM, context, BranchDirectory), docs

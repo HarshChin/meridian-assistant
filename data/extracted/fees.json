@@ -14,6 +14,7 @@
     "electrical": 85
   },
   "emergency_dispatch_fees_usd": {
-    "plumbing": 99
+    "plumbing": 99,
+    "hvac": 89
   }
 }

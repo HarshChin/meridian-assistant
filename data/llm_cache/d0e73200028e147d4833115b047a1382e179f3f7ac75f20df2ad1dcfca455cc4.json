@@ -1,0 +1,6 @@
+{
+  "weekday_after_hours_usd": 75,
+  "sunday_holiday_usd": 125,
+  "business_hours_start_hour": 7,
+  "business_hours_end_hour": 18
+}

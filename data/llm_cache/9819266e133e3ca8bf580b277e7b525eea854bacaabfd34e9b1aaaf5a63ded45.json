@@ -1,0 +1,64 @@
+{
+  "counties": [
+    {
+      "county": "Calvert",
+      "region": "east",
+      "zip_segments": [
+        {
+          "low": 20610,
+          "high": 20620
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "not_available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": "GridWorks",
+      "coordination_zips": []
+    },
+    {
+      "county": "Charles",
+      "region": "east",
+      "zip_segments": [
+        {
+          "low": 20630,
+          "high": 20630
+        },
+        {
+          "low": 20640,
+          "high": 20645
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "pending",
+      "electrical": "available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "St. Mary's",
+      "region": "east",
+      "zip_segments": [
+        {
+          "low": 20650,
+          "high": 20650
+        }
+      ],
+      "hvac": "subcontracted",
+      "plumbing": "available",
+      "electrical": "available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": true,
+      "refer_partner": null,
+      "coordination_zips": []
+    }
+  ],
+  "out_of_area_policy": null,
+  "travel_surcharge_usd": null
+}

@@ -37,8 +37,10 @@ def test_diagnostic_fee() -> None:
 
 
 def test_emergency_dispatch_fee() -> None:
+    # faq_emergencies documents emergency dispatch fees of $99 plumbing and $89 HVAC.
     assert emergency_dispatch_fee(ServiceType.PLUMBING) == 99
-    assert emergency_dispatch_fee(ServiceType.HVAC) == 0
+    assert emergency_dispatch_fee(ServiceType.HVAC) == 89
+    assert emergency_dispatch_fee(ServiceType.ELECTRICAL) == 0  # none documented
 
 
 def test_is_federal_holiday() -> None:

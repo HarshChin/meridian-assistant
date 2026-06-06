@@ -10,7 +10,6 @@ retrieval drift. Adding documents = re-run ``ingest`` then this; nothing is hand
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 from ..config import get_settings
@@ -28,11 +27,12 @@ def _corpus_hash() -> str | None:
     return None
 
 
-def compile_knowledge(compiled_at: str = "unspecified") -> Path:
+def compile_knowledge() -> Path:
     """Extract every capability record into ``data/extracted`` and write a manifest.
 
-    Args:
-        compiled_at: A provenance label (passed in; the build never reads the wall clock).
+    The manifest's provenance is fully deterministic (model + corpus hash), so re-running this
+    step reproduces every artifact — including the manifest — byte-for-byte. The build never
+    reads the wall clock.
 
     Returns:
         The output directory holding the compiled records + ``manifest.json``.
@@ -56,7 +56,6 @@ def compile_knowledge(compiled_at: str = "unspecified") -> Path:
         print(f"compiled {name}: {type(record).__name__} from {docs}")
 
     manifest = {
-        "compiled_at": compiled_at,
         "model": settings.agent_model,
         "corpus_hash": _corpus_hash(),
         "capabilities": capabilities,
@@ -66,6 +65,5 @@ def compile_knowledge(compiled_at: str = "unspecified") -> Path:
 
 
 if __name__ == "__main__":
-    label = sys.argv[1] if len(sys.argv) > 1 else "unspecified"
-    path = compile_knowledge(label)
+    path = compile_knowledge()
     print(f"\nKnowledge compiled to {path}")

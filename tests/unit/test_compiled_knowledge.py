@@ -21,7 +21,9 @@ def test_fee_schedule_values() -> None:
     assert (f.weekday_after_hours_usd, f.sunday_holiday_usd) == (75, 125)
     assert (f.business_hours_start_hour, f.business_hours_end_hour) == (7, 18)
     assert f.diagnostic_fees_usd == {"hvac": 89, "electrical": 85, "plumbing": 75}
-    assert f.emergency_dispatch_fees_usd == {"plumbing": 99}
+    # faq_emergencies documents "($99 plumbing, $89 HVAC)" — both are compiled (the old
+    # hand-authored data missed the $89 HVAC figure; the grounded path captures it).
+    assert f.emergency_dispatch_fees_usd == {"plumbing": 99, "hvac": 89}
 
 
 def test_branch_directory() -> None:

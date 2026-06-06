@@ -49,3 +49,10 @@ def load_fees() -> FeeSchedule:
 def load_branches() -> BranchDirectory:
     """Return the compiled branch directory."""
     return _load("branches", BranchDirectory)
+
+
+def reset_caches() -> None:
+    """Clear the loader caches (call after recompiling or repointing the data directory)."""
+    load_coverage.cache_clear()
+    load_fees.cache_clear()
+    load_branches.cache_clear()

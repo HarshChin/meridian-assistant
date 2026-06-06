@@ -22,11 +22,15 @@ from ..config import get_settings
 
 T = TypeVar("T", bound=BaseModel)
 
-_MAX_TOKENS = 4096
+_MAX_TOKENS = 8192
 
 
 class LLMUnavailableError(RuntimeError):
     """Raised when a live call is needed but no API key is configured."""
+
+
+class LLMTruncationError(RuntimeError):
+    """Raised when a structured response is cut off at ``max_tokens`` (likely incomplete)."""
 
 
 class LLMClient:
@@ -85,6 +89,11 @@ class LLMClient:
             tools=[tool],
             tool_choice={"type": "tool", "name": "emit"},
         )
+        if response.stop_reason == "max_tokens":
+            raise LLMTruncationError(
+                f"{schema.__name__} extraction hit max_tokens ({_MAX_TOKENS}); the record is "
+                "likely incomplete. Raise the limit or shard the extraction per entity."
+            )
         block = next(b for b in response.content if isinstance(b, ToolUseBlock))
         result = schema.model_validate(block.input)
         cache_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")

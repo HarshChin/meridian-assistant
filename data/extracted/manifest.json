@@ -1,5 +1,4 @@
 {
-  "compiled_at": "2026-06-06",
   "model": "claude-sonnet-4-6",
   "corpus_hash": "70da4c86f71ab56d",
   "capabilities": {
@@ -13,8 +12,10 @@
     "fees": {
       "schema": "FeeSchedule",
       "source_docs": [
+        "branch_hours",
         "cancellation_policy",
         "electrical_pricing",
+        "faq_emergencies",
         "hvac_pricing",
         "plumbing_pricing"
       ]
@@ -22,8 +23,7 @@
     "branches": {
       "schema": "BranchDirectory",
       "source_docs": [
-        "branch_hours",
-        "faq_emergencies"
+        "branch_hours"
       ]
     }
   }

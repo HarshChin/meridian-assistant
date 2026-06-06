@@ -13,12 +13,13 @@ over it. Finding and handling them transparently is part of the deliverable.
    (Falls Church city) is **not** listed — so by the documented policy it should escalate,
    exactly like test #9 (Manassas 20110). Yet test #3's gold says *book it*. The same
    situation has opposite gold labels.
-   **Decision:** a labeled `data/service_area/overrides.yaml` records branch-city ZIPs
-   (`source: inferred-from-branch-location (doc 08)`, `confidence: low`), consulted only
-   *after* the documented ranges. The assistant may offer the booking **but must surface the
-   low-confidence override** — it must never present an inferred eligibility as documented
-   fact. The eval grades *that disclosure invariant*, not "a booking happened," and uses a
-   genuinely in-range ZIP (**22032**) for the unambiguous booking-success case.
+   **Decision:** we follow the **document**. The grounded coverage record contains only what
+   the service-area docs state, so 22046 resolves to `unknown` → **escalate to the Branch
+   Manager**, never silently booked on an inferred eligibility. (An earlier prototype carried a
+   hand-authored branch-city `overrides.yaml`; it was removed when all facts moved to grounded
+   extraction — hand-authoring a coverage fact the document does not state is exactly what the
+   design forbids.) The eval grades the **disclosure/escalation invariant**, not "a booking
+   happened," and uses a genuinely in-range ZIP (**22032**) for the unambiguous success case.
 
 2. **Test #5 says "Friday the 24th," but 2026-01-24 is a Saturday.** Source self-contradiction.
    We treat the **ISO date** as authoritative and add a calendar-consistency assertion in the
@@ -35,10 +36,13 @@ over it. Finding and handling them transparently is part of the deliverable.
    service-area doc exists. **Decision:** any South/unmapped ZIP resolves to `unknown`
    (*distinct* from a documented `no`) → clarify/escalate. We do not invent coverage.
 
-5. **Central region has no branch-assignment table** (unlike North). **Decision:** a documented
-   assumption derived from `08_branch_hours.pdf` (Rockville / Columbia / College Park; the
-   University of Maryland campus, ZIP 20742, maps to College Park and carries a
-   facilities-coordination flag).
+5. **Central region has no branch-assignment table** (unlike North, whose doc maps
+   Fairfax/Arlington/Alexandria → Falls Church/Tysons and Loudoun → Herndon). **Decision:** the
+   grounded extractor leaves Central counties' `primary_branch` **null** rather than inventing an
+   assignment — the document does not state one, so neither do we. (Branch *operating hours* for
+   all 11 locations, the Central branches included, are still compiled from `08_branch_hours.pdf`;
+   only the county→branch *routing* for Central is absent and intentionally left unfilled. The UMD
+   campus, ZIP 20742, still carries the documented facilities-coordination flag.)
 
 ## Engineering assumptions
 
@@ -56,3 +60,20 @@ over it. Finding and handling them transparently is part of the deliverable.
 
 9. **`confirmation_sent` is simulated.** No real SMS/email is dispatched; the mock returns the
    flag as the spec describes.
+
+10. **Federal-holiday set is a documented stub.** `api_contract.py` enumerates the 2026 US
+    federal holidays (the demo/eval window). The corpus references holidays for the surcharge but
+    does not enumerate them, and they are not business facts that scale with the corpus, so they
+    live in code as an acknowledged simplification. Production would compute them per year (e.g.
+    the `holidays` package) keyed on the appointment's year.
+
+11. **Holidays are modelled as open-with-surcharge, not closed.** The pricing docs add a +$125
+    Sunday/holiday surcharge (implying service *is* offered then), so branch openness for
+    `first_available` does not treat a federal holiday as a closure — a holiday slot may be offered
+    with the holiday surcharge applied rather than skipped. (Sundays remain not-open for normal
+    booking per the branch hours.)
+
+12. **Emergency dispatch fees include the $89 HVAC figure.** `11_faq_emergencies.pdf` states
+    *"Emergency dispatch fees ($99 plumbing, $89 HVAC)"*; both are compiled. The fee lives in the
+    emergencies FAQ rather than the HVAC pricing sheet, so the fee extractor selects documents by
+    relevance (not a fixed top-N) to capture it.
