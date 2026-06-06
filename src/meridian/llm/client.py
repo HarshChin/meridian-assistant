@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import anthropic
-from anthropic.types import ToolUseBlock
-from pydantic import BaseModel
+from anthropic.types import TextBlock, ToolUseBlock
+from pydantic import BaseModel, Field
 
 from ..config import get_settings
 
@@ -31,6 +31,21 @@ class LLMUnavailableError(RuntimeError):
 
 class LLMTruncationError(RuntimeError):
     """Raised when a structured response is cut off at ``max_tokens`` (likely incomplete)."""
+
+
+class AgentToolCall(BaseModel):
+    """A tool the model chose to call (id-free: the agent loop assigns deterministic ids)."""
+
+    name: str
+    input: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentTurn(BaseModel):
+    """One assistant turn from a tool-use ``converse`` call: free text and/or tool calls."""
+
+    text: str = ""
+    tool_calls: list[AgentToolCall] = Field(default_factory=list)
+    stop_reason: str = ""
 
 
 class LLMClient:
@@ -98,3 +113,50 @@ class LLMClient:
         result = schema.model_validate(block.input)
         cache_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
         return result
+
+    def _conv_cache_key(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> str:
+        payload = json.dumps(
+            {"model": self._model, "system": system, "messages": messages, "tools": tools},
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def converse(
+        self,
+        system: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> AgentTurn:
+        """Run one tool-use turn (the model decides text vs tool calls); cached, temperature 0.
+
+        The returned tool calls are id-free — the agent loop assigns deterministic ids when it
+        appends the tool_use / tool_result blocks, so the conversation (and this cache key) stays
+        reproducible across runs regardless of the API's non-deterministic tool ids.
+        """
+        cache_path = self._cache_dir / f"conv_{self._conv_cache_key(system, messages, tools)}.json"
+        if cache_path.exists():
+            return AgentTurn.model_validate_json(cache_path.read_text(encoding="utf-8"))
+
+        response = self._client_or_raise().messages.create(
+            model=self._model,
+            max_tokens=_MAX_TOKENS,
+            temperature=0,
+            system=system,
+            messages=messages,  # type: ignore[arg-type]  # plain dicts accepted at runtime
+            tools=tools,  # type: ignore[arg-type]
+        )
+        if response.stop_reason == "max_tokens":
+            raise LLMTruncationError(
+                f"agent turn hit max_tokens ({_MAX_TOKENS}); the response is likely incomplete."
+            )
+        text = "".join(b.text for b in response.content if isinstance(b, TextBlock))
+        tool_calls = [
+            AgentToolCall(name=b.name, input=dict(b.input) if isinstance(b.input, dict) else {})
+            for b in response.content
+            if isinstance(b, ToolUseBlock)
+        ]
+        turn = AgentTurn(text=text, tool_calls=tool_calls, stop_reason=response.stop_reason or "")
+        cache_path.write_text(turn.model_dump_json(indent=2), encoding="utf-8")
+        return turn
