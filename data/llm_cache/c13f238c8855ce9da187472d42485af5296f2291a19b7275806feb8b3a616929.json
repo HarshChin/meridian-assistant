@@ -1,0 +1,10 @@
+{
+  "intent": "reschedule",
+  "service_type": null,
+  "zip_code": null,
+  "job_type": null,
+  "date_phrase": "2026-01-24",
+  "window": "afternoon",
+  "booking_id": "BK-00400022",
+  "customer_id": null
+}
