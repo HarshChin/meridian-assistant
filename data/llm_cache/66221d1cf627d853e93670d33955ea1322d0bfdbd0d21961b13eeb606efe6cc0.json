@@ -1,0 +1,10 @@
+{
+  "intent": "book",
+  "service_type": "hvac",
+  "zip_code": "22030",
+  "job_type": "tune_up",
+  "date_phrase": "2026-01-28",
+  "window": "morning",
+  "booking_id": null,
+  "customer_id": "CID-7000"
+}
