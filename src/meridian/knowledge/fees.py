@@ -58,5 +58,20 @@ def diagnostic_fee(
 
 
 def emergency_dispatch_fee(service_type: ServiceType) -> int:
-    """Return the emergency dispatch fee in USD (only plumbing documents one)."""
+    """Return the emergency dispatch fee in USD per service line (0 if none documented)."""
     return load_fees().emergency_dispatch_fees_usd.get(service_type.value, 0)
+
+
+def cancellation_fee(notice_hours: float) -> int:
+    """Fee (before any waiver) for cancelling with ``notice_hours`` of notice.
+
+    Boundary convention: exactly the free-notice boundary (24h) and the late-cancel boundary
+    (2h) both count as the late-cancel fee; below the late-cancel boundary (or a no-show, i.e.
+    negative notice) is the no-show fee.
+    """
+    fees = load_fees()
+    if notice_hours > fees.free_notice_hours:
+        return 0
+    if notice_hours >= fees.late_cancel_threshold_hours:
+        return fees.late_cancel_fee_usd
+    return fees.no_show_fee_usd

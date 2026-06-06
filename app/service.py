@@ -27,6 +27,7 @@ from meridian.domain.enums import (
 from meridian.domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
 from meridian.knowledge import branches
 from meridian.knowledge.coverage import check_coverage
+from meridian.knowledge.fees import cancellation_fee
 from meridian.knowledge.loader import load_fees
 from meridian.windows import (
     SUNDAY,
@@ -44,26 +45,6 @@ from .schemas import (
     ModifyResponse,
 )
 from .store import BookingRecord, BookingStore
-
-
-def cancellation_fee(notice_hours: float) -> int:
-    """Fee (before any waiver) for cancelling with ``notice_hours`` of notice.
-
-    Thresholds and amounts come from the compiled fee schedule (doc 07). Boundary convention:
-    exactly the free-notice boundary (24h) and the late-cancel boundary (2h) → late fee.
-
-    Args:
-        notice_hours: Hours of notice before the appointment (negative = no-show).
-
-    Returns:
-        The fee in whole USD.
-    """
-    fees = load_fees()
-    if notice_hours > fees.free_notice_hours:
-        return 0
-    if notice_hours >= fees.late_cancel_threshold_hours:
-        return fees.late_cancel_fee_usd
-    return fees.no_show_fee_usd
 
 
 class BookingService:
