@@ -114,6 +114,31 @@ class LLMClient:
         cache_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
         return result
 
+    def complete(self, system: str, user: str) -> str:
+        """Return a plain text completion (no tools); cached, temperature 0."""
+        key = hashlib.sha256(
+            json.dumps(
+                {"model": self._model, "system": system, "user": user}, sort_keys=True
+            ).encode()
+        ).hexdigest()
+        cache_path = self._cache_dir / f"text_{key}.json"
+        if cache_path.exists():
+            return str(json.loads(cache_path.read_text(encoding="utf-8"))["text"])
+        response = self._client_or_raise().messages.create(
+            model=self._model,
+            max_tokens=_MAX_TOKENS,
+            temperature=0,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        if response.stop_reason == "max_tokens":
+            raise LLMTruncationError(
+                f"completion hit max_tokens ({_MAX_TOKENS}); likely truncated."
+            )
+        text = "".join(b.text for b in response.content if isinstance(b, TextBlock))
+        cache_path.write_text(json.dumps({"text": text}, indent=2), encoding="utf-8")
+        return text
+
     def _conv_cache_key(
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> str:
