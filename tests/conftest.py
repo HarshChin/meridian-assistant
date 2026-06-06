@@ -1,15 +1,10 @@
-"""Shared pytest fixtures (frozen clock, canonical instant)."""
+"""Shared pytest fixtures (frozen clock at the canonical instant)."""
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 
-from meridian.clock import EASTERN, FrozenClock
-
-CANONICAL_NOW = datetime(2026, 1, 20, 9, 0, tzinfo=EASTERN)
-"""Canonical demo/eval instant: Tue 2026-01-20 09:00 ET (see PLAN determinism)."""
+from meridian.clock import CANONICAL_NOW, FrozenClock
 
 
 @pytest.fixture

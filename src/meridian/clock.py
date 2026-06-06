@@ -18,6 +18,9 @@ from zoneinfo import ZoneInfo
 EASTERN = ZoneInfo("America/New_York")
 """Meridian operates in the US Eastern timezone (branch hours, surcharges)."""
 
+CANONICAL_NOW = datetime(2026, 1, 20, 9, 0, tzinfo=EASTERN)
+"""Canonical demo/eval instant: Tue 2026-01-20 09:00 ET (see PLAN determinism)."""
+
 
 @runtime_checkable
 class Clock(Protocol):

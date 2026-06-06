@@ -86,4 +86,5 @@ disallow_untyped_defs = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]  # make top-level packages (app, server, eval) importable in tests
 filterwarnings = ["ignore::DeprecationWarning"]
