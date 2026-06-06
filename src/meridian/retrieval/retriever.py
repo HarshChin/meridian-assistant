@@ -53,6 +53,12 @@ class HybridRetriever:
         bm25 = BM25Index([c.chunk_id for c in chunks], [c.text for c in chunks])
         return cls(chunks, vector_store, bm25)
 
+    def doc_chunks(self, doc_id: str) -> list[Chunk]:
+        """Return every chunk of ``doc_id`` ordered by position (for full-document extraction)."""
+        return sorted(
+            (c for c in self._by_id.values() if c.doc_id == doc_id), key=lambda c: c.ordinal
+        )
+
     def search(
         self, query: str, k: int | None = None, candidate_k: int | None = None
     ) -> tuple[list[RetrievedChunk], Confidence]:

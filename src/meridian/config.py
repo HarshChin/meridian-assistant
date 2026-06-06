@@ -86,6 +86,11 @@ class Settings(BaseSettings):
         """Directory holding extracted, committed corpus markdown."""
         return self.data_dir / "corpus"
 
+    @property
+    def llm_cache_dir(self) -> Path:
+        """Directory of cached LLM responses (committed for keyless reproducibility)."""
+        return self.data_dir / "llm_cache"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
