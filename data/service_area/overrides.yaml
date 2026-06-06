@@ -1,0 +1,16 @@
+# Branch-city ZIP overrides — INFERRED, not documented.
+#
+# These ZIPs are not in the documented county ranges but correspond to a Meridian
+# branch city (08_branch_hours.pdf), so coverage is a reasonable inference. They are
+# consulted ONLY after the documented ranges and are marked low-confidence: the
+# assistant must DISCLOSE the inference and never present it as documented fact.
+# See ASSUMPTIONS.md (#1) for the 22046 / test-#3 conflict this resolves.
+source: "inferred-from-branch-location (doc 08)"
+confidence: low
+zips:
+  - zip: "22046"                     # Falls Church city (test message #3)
+    region: north
+    county: "Falls Church (city)"
+    services: {hvac: covered, plumbing: covered, electrical: covered}
+    primary_branch: Falls Church
+    overflow_branch: Tysons

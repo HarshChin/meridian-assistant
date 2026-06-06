@@ -1,0 +1,23 @@
+# Branch directory + hours.  Transcribed from 08_branch_hours.pdf (v5.3, 2026-01-10).
+# Day values are either "HH:MM-HH:MM", "closed", or "emergency" (Sunday emergency-line only).
+# 11 branches across 3 regions (North 3, Central 3, South 5).
+emergency_line: "1-800-555-0190"
+contact_center:
+  mon_fri: "07:00-19:00"
+  sat: "08:00-17:00"
+  sun: "closed"          # emergency line only
+branches:
+  # --- North ---
+  - {name: Falls Church, region: north, mon_fri: "07:00-18:00", sat: "08:00-16:00", sun: "emergency"}
+  - {name: Tysons,       region: north, mon_fri: "07:00-18:00", sat: "08:00-16:00", sun: "closed"}
+  - {name: Herndon,      region: north, mon_fri: "08:00-17:00", sat: "08:00-14:00", sun: "closed"}
+  # --- Central ---
+  - {name: Rockville,    region: central, mon_fri: "07:00-18:00", sat: "08:00-16:00", sun: "emergency"}
+  - {name: Columbia,     region: central, mon_fri: "07:00-18:00", sat: "08:00-15:00", sun: "closed"}
+  - {name: College Park, region: central, mon_fri: "08:00-17:00", sat: "closed",      sun: "closed"}
+  # --- South (branches exist; no ZIP-coverage doc -> ZIPs resolve to UNKNOWN) ---
+  - {name: Annapolis,    region: south, mon_fri: "07:00-18:00", sat: "08:00-16:00", sun: "emergency"}
+  - {name: Glen Burnie,  region: south, mon_fri: "07:00-18:00", sat: "08:00-15:00", sun: "closed"}
+  - {name: Bowie,        region: south, mon_fri: "08:00-17:00", sat: "closed",      sun: "closed"}
+  - {name: Laurel,       region: south, mon_fri: "08:00-17:00", sat: "08:00-14:00", sun: "closed"}
+  - {name: Owings Mills, region: south, mon_fri: "08:00-17:00", sat: "closed",      sun: "closed"}

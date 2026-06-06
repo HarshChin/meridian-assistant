@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meridian-assistant"
+version = "0.1.0"
+description = "AI contact-center assistant for Meridian Home Services (take-home prototype)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Harshvardhan Chincholkar" }]
+dependencies = [
+  "anthropic>=0.40",
+  "langgraph>=0.2.50",
+  "langchain-core>=0.3",
+  "chromadb>=0.5.5",
+  "fastembed>=0.4",
+  "rank-bm25>=0.2.2",
+  "pdfplumber>=0.11",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "structlog>=24.1",
+  "pyyaml>=6.0",
+  "python-dateutil>=2.9",
+  "numpy>=1.26",
+  "tzdata>=2024.1",  # ships the IANA tz database (zoneinfo has none on Windows)
+]
+
+[project.optional-dependencies]
+# Ragas is a DIRECTIONAL cross-check only. It is intentionally isolated: the core
+# package and the deterministic eval tier install and run without it.
+ragas = [
+  "ragas>=0.2",
+  "datasets>=2.19",
+  "langchain>=0.3",
+  "langchain-anthropic>=0.2",
+]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "types-PyYAML",
+  "types-python-dateutil",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meridian"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "D"]
+# D203/D213: conflicting docstring styles; D104: package __init__ docstrings optional;
+# B008: FastAPI's Depends() in argument defaults is idiomatic.
+ignore = ["D203", "D213", "D104", "B008"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"scripts/*" = ["D"]
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

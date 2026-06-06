@@ -1,0 +1,34 @@
+# Service Area — North Region.  Transcribed verbatim from 01_service_area_north.pdf
+# (v2.1, updated 2025-11-01).  Service tokens avoid YAML's yes/no booleans on purpose:
+#   covered | pending | unavailable | subcontracted
+# ZIP coverage is a list of inclusive [low, high] segments; gaps between segments are
+# NOT covered (e.g. Fairfax omits 22040; Arlington omits 22210-22212).
+region: north
+doc_id: service_area_north
+version: "2.1"
+escalation: "ZIPs not listed escalate to the Branch Manager for spot-approval."
+travel_surcharge_usd: 45
+travel_surcharge_over_miles: 20
+counties:
+  - name: Fairfax
+    zips: [[22030, 22039], [22041, 22044]]
+    services: {hvac: covered, plumbing: covered, electrical: covered}
+    primary_branch: Falls Church
+    overflow_branch: Tysons
+  - name: Arlington
+    zips: [[22201, 22209], [22213, 22213]]
+    services: {hvac: covered, plumbing: covered, electrical: covered}
+    primary_branch: Falls Church
+    overflow_branch: Tysons
+  - name: Alexandria
+    zips: [[22301, 22315]]
+    services: {hvac: covered, plumbing: covered, electrical: pending}
+    pending_note: "Electrical pending (Q2)."
+    primary_branch: Falls Church
+    overflow_branch: Tysons
+  - name: Loudoun
+    zips: [[20147, 20148], [20164, 20165]]
+    services: {hvac: covered, plumbing: subcontracted, electrical: unavailable}
+    subcontracted_note: "Plumbing is sub-contracted; no same-day service."
+    primary_branch: Herndon
+    overflow_branch: null
