@@ -142,7 +142,7 @@ class BookingService:
             service_type=rec.service_type,
             job_type=rec.job_type,
             appointment_window=rec.appointment_window,
-            tech_name=rec.tech_name,
+            tech_name=rec.tech_name if owns else None,  # technician name is owner-only PII
             tech_eta_minutes=rec.tech_eta_minutes if rec.status is LookupStatus.EN_ROUTE else None,
             notes=rec.notes if owns else None,
             invoice_total=rec.invoice_total if (owns and completed) else None,

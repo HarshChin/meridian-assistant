@@ -20,6 +20,19 @@ from .models import (
 )
 
 
+def _extract_detail(response: httpx.Response) -> str:
+    """Pull a readable error message from a response (normalising FastAPI's 422 list-of-dicts)."""
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text
+    detail = body.get("detail") if isinstance(body, dict) else None
+    if isinstance(detail, list):  # FastAPI request-validation errors are a list of dicts
+        msgs = [str(item.get("msg", item)) for item in detail if isinstance(item, dict)]
+        return "; ".join(msgs) or "Invalid request."
+    return str(detail) if detail is not None else (response.text or "")
+
+
 class HttpBookingClient:
     """Calls the mock Booking API over HTTP; satisfies the :class:`BookingClient` Protocol."""
 
@@ -42,21 +55,20 @@ class HttpBookingClient:
 
     @staticmethod
     def _raise_for_status(response: httpx.Response) -> None:
-        """Map booking-API error codes to typed domain errors."""
+        """Map every error status to a typed domain error — never leak a raw httpx exception.
+
+        404 → not-found, 403 → ownership; everything else with a 4xx/5xx code (validation, auth,
+        rate-limit, server error) surfaces as :class:`InvalidInputError` so the tools layer always
+        catches it and returns a customer-safe result instead of crashing the turn.
+        """
         if response.status_code < 400:
             return
-        detail = ""
-        try:
-            detail = str(response.json().get("detail", ""))
-        except (ValueError, AttributeError):
-            detail = response.text
+        detail = _extract_detail(response)
         if response.status_code == 404:
             raise BookingNotFoundError(detail or "Booking not found.")
         if response.status_code == 403:
             raise OwnershipError(detail or "Forbidden.")
-        if response.status_code in (400, 422):
-            raise InvalidInputError(detail or "Invalid request.")
-        response.raise_for_status()
+        raise InvalidInputError(detail or f"Request failed (HTTP {response.status_code}).")
 
     def create_booking(self, req: CreateBookingRequest) -> CreateBookingResponse:
         """POST a booking; the request's channel must match this client's token scope."""

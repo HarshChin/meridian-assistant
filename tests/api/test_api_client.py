@@ -27,7 +27,7 @@ from meridian.domain.enums import (
     ServiceType,
     Window,
 )
-from meridian.domain.errors import BookingNotFoundError, OwnershipError
+from meridian.domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
 
 
 def _service() -> BookingService:
@@ -81,6 +81,25 @@ def test_http_owner_sees_pii(http: HttpBookingClient) -> None:
     resp = http.get_booking("BK-00391042", customer_id="CID-1001")
     assert resp.tech_name == "Dana Reyes"
     assert resp.notes is not None
+
+
+def test_http_pii_withheld_without_owner(http: HttpBookingClient) -> None:
+    resp = http.get_booking("BK-00391042")  # no customer_id -> owner-only PII withheld
+    assert resp.tech_name is None
+    assert resp.notes is None
+
+
+def test_http_bad_token_maps_to_domain_error() -> None:
+    # A 401 must surface as a typed domain error, never a raw httpx.HTTPStatusError.
+    with TestClient(create_app(_service())) as raw:
+        client = HttpBookingClient(
+            base_url="http://testserver/v1",
+            channel=Channel.AGENT,
+            http_client=raw,
+            token="not-a-real-token",
+        )
+        with pytest.raises(InvalidInputError):
+            client.get_booking("BK-00391042")
 
 
 def test_http_modify_cancel(http: HttpBookingClient) -> None:

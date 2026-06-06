@@ -90,6 +90,11 @@ def test_quote_fee_exact_amounts(registry: ToolRegistry) -> None:
         ]
         == 75
     )
+    # electrical has no documented emergency dispatch fee -> abstain, not an ungrounded $0
+    elec = registry.execute(
+        "quote_fee", {"kind": "emergency_dispatch", "service_type": "electrical"}
+    )
+    assert elec.ok is False
     # missing required field -> ok=False, not a crash
     assert registry.execute("quote_fee", {"kind": "diagnostic"}).ok is False
 

@@ -9,7 +9,8 @@ step; this layer is unchanged.
 from __future__ import annotations
 
 import functools
-from typing import TypeVar
+import json
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -51,8 +52,31 @@ def load_branches() -> BranchDirectory:
     return _load("branches", BranchDirectory)
 
 
+@functools.lru_cache(maxsize=1)
+def load_manifest() -> dict[str, Any]:
+    """Return the compiled-knowledge provenance manifest (model, corpus hash, source docs)."""
+    path = get_settings().data_dir / "extracted" / "manifest.json"
+    if not path.exists():
+        raise KnowledgeNotCompiledError(
+            f"Missing {path}. Run `python -m meridian.extraction.compile`."
+        )
+    return dict(json.loads(path.read_text(encoding="utf-8")))
+
+
+def fee_source_docs() -> list[str]:
+    """Return the documents the fee schedule was compiled from (a data-derived citation)."""
+    try:
+        capabilities = load_manifest().get("capabilities", {})
+    except KnowledgeNotCompiledError:
+        return []
+    fees = capabilities.get("fees", {}) if isinstance(capabilities, dict) else {}
+    docs = fees.get("source_docs", []) if isinstance(fees, dict) else []
+    return [str(doc) for doc in docs]
+
+
 def reset_caches() -> None:
     """Clear the loader caches (call after recompiling or repointing the data directory)."""
     load_coverage.cache_clear()
     load_fees.cache_clear()
     load_branches.cache_clear()
+    load_manifest.cache_clear()

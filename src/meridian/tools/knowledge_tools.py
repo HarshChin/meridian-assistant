@@ -9,12 +9,8 @@ from __future__ import annotations
 
 from ..domain.enums import JobType
 from ..knowledge.coverage import check_coverage
-from ..knowledge.fees import (
-    after_hours_surcharge,
-    cancellation_fee,
-    diagnostic_fee,
-    emergency_dispatch_fee,
-)
+from ..knowledge.fees import after_hours_surcharge, cancellation_fee, diagnostic_fee
+from ..knowledge.loader import fee_source_docs, load_fees
 from ..retrieval.confidence import Confidence
 from ..retrieval.retriever import HybridRetriever
 from .base import ToolResult
@@ -46,14 +42,6 @@ def check_service_area(args: CheckServiceAreaArgs) -> ToolResult:
     )
 
 
-_FEE_SOURCE: dict[str, str] = {
-    "diagnostic": "pricing documents (compiled fees.json)",
-    "emergency_dispatch": "faq_emergencies / plumbing_pricing (compiled fees.json)",
-    "cancellation": "cancellation_policy (compiled fees.json)",
-    "after_hours_surcharge": "hvac_pricing (compiled fees.json)",
-}
-
-
 def _missing(kind: str, field: str) -> ToolResult:
     return ToolResult(
         tool="quote_fee",
@@ -76,7 +64,16 @@ def quote_fee(args: QuoteFeeArgs) -> ToolResult:
     elif args.kind == "emergency_dispatch":
         if args.service_type is None:
             return _missing(args.kind, "service_type")
-        amount = emergency_dispatch_fee(args.service_type)
+        documented = load_fees().emergency_dispatch_fees_usd
+        # Distinguish "documented as free" from "not documented" — never quote an ungrounded $0.
+        if args.service_type.value not in documented:
+            return ToolResult(
+                tool="quote_fee",
+                ok=False,
+                summary=f"No emergency dispatch fee is documented for {args.service_type.value}.",
+                data={"kind": "emergency_dispatch", "service_type": args.service_type.value},
+            )
+        amount = documented[args.service_type.value]
     elif args.kind == "cancellation":
         if args.notice_hours is None:
             return _missing(args.kind, "notice_hours")
@@ -90,5 +87,5 @@ def quote_fee(args: QuoteFeeArgs) -> ToolResult:
         ok=True,
         summary=f"{args.kind} fee: ${amount}.",
         data={"kind": args.kind, "amount_usd": amount},
-        citations=[_FEE_SOURCE[args.kind]],
+        citations=fee_source_docs(),
     )

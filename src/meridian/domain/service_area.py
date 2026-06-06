@@ -26,10 +26,11 @@ class CoverageFlags(BaseModel):
 class CoverageDecision(BaseModel):
     """Result of :func:`meridian.knowledge.coverage.check_coverage`.
 
-    ``source`` and ``confidence`` make inference explicit: a decision derived from
-    an inferred branch-city override (e.g. ZIP 22046) is ``source="override"`` /
-    ``confidence="low"`` and must be disclosed as such — never presented as a
-    documented fact.
+    ``source`` distinguishes a documented decision (``"documented"``) from a ZIP that is in no
+    documented segment (``"none"`` → ``UNKNOWN``, escalate). The grounded path never fabricates
+    coverage, so it emits only ``"documented"`` / ``"none"`` — an earlier hand-authored
+    low-confidence branch-city ``"override"`` path was removed (see ASSUMPTIONS.md #1 and
+    DESIGN_EVOLUTION.md §1.2). ``confidence`` reflects extraction confidence.
     """
 
     zip_code: str
@@ -40,7 +41,7 @@ class CoverageDecision(BaseModel):
     primary_branch: str | None = None
     overflow_branch: str | None = None
     flags: CoverageFlags = Field(default_factory=CoverageFlags)
-    source: str = Field(description='"documented" | "override" | "none".')
+    source: str = Field(description='"documented" | "none".')
     confidence: str = Field(default="high", description='"high" | "low".')
     citation: str = Field(description="Human-readable source reference for the trace/answer.")
     rationale: str = Field(description="Short, customer-safe explanation of the outcome.")

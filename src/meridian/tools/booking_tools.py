@@ -11,8 +11,8 @@ from pydantic import ValidationError
 
 from ..api_client.base import BookingClient
 from ..api_client.models import CreateBookingRequest, ModifyRequest
-from ..domain.enums import Channel
-from ..domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
+from ..domain.enums import Channel, ModifyAction
+from ..domain.errors import BookingNotFoundError, MeridianError, OwnershipError
 from .base import ToolResult
 from .schemas import CreateBookingArgs, EscalateArgs, LookupBookingArgs, ModifyBookingArgs
 
@@ -34,6 +34,13 @@ def lookup_booking(client: BookingClient, args: LookupBookingArgs) -> ToolResult
             ok=False,
             summary="Cannot share details: the customer id does not match this booking.",
             data={"error": "ownership"},
+        )
+    except MeridianError as exc:
+        return ToolResult(
+            tool="lookup_booking",
+            ok=False,
+            summary=str(exc) or "The lookup could not be completed.",
+            data={"error": "request_failed"},
         )
     return ToolResult(
         tool="lookup_booking",
@@ -66,9 +73,9 @@ def create_booking(client: BookingClient, channel: Channel, args: CreateBookingA
         )
     try:
         resp = client.create_booking(req)
-    except InvalidInputError as exc:
+    except MeridianError as exc:
         return ToolResult(
-            tool="create_booking", ok=False, summary=str(exc), data={"error": "invalid_input"}
+            tool="create_booking", ok=False, summary=str(exc), data={"error": "request_failed"}
         )
     return ToolResult(
         tool="create_booking",
@@ -82,7 +89,7 @@ def modify_booking(client: BookingClient, args: ModifyBookingArgs) -> ToolResult
     """Reschedule or cancel a booking (mutating; commit-only)."""
     try:
         req = ModifyRequest(
-            action=args.action,
+            action=ModifyAction(args.action),
             new_date=args.new_date,
             new_window=args.new_window,
             cancel_reason=args.cancel_reason,
@@ -101,9 +108,9 @@ def modify_booking(client: BookingClient, args: ModifyBookingArgs) -> ToolResult
             summary=f"No booking found for {args.booking_id}.",
             data={"error": "not_found"},
         )
-    except InvalidInputError as exc:
+    except MeridianError as exc:
         return ToolResult(
-            tool="modify_booking", ok=False, summary=str(exc), data={"error": "invalid_input"}
+            tool="modify_booking", ok=False, summary=str(exc), data={"error": "request_failed"}
         )
     return ToolResult(
         tool="modify_booking",

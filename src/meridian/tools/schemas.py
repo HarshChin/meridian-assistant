@@ -13,7 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ..domain.booking import CustomerInfo
-from ..domain.enums import CancelReason, JobType, ModifyAction, ServiceType, Window
+from ..domain.enums import CancelReason, JobType, ServiceType, Window
 
 
 class KnowledgeSearchArgs(BaseModel):
@@ -83,7 +83,9 @@ class ModifyBookingArgs(BaseModel):
     """Arguments for ``modify_booking`` (reschedule / cancel)."""
 
     booking_id: str
-    action: ModifyAction
+    action: Literal["reschedule", "cancel"] = Field(
+        description="Only reschedule and cancel are supported (update_notes is out of scope)."
+    )
     new_date: date | None = Field(default=None, description="Required for a reschedule.")
     new_window: Window | None = Field(default=None, description="Required for a reschedule.")
     cancel_reason: CancelReason | None = None
