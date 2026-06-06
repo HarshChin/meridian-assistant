@@ -151,7 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--system-clock",
         action="store_true",
-        help="Use the real clock (default: frozen demo clock).",
+        help="Use the real wall clock instead of the frozen demo clock. Note: the shipped "
+        "seed/demo data is dated January 2026, so this is only coherent with live data.",
     )
     parser.add_argument(
         "--channel", default="agent", choices=[c.value for c in Channel], help="Inbound channel."

@@ -16,6 +16,7 @@ from typing import Any
 
 from langgraph.types import interrupt
 
+from ..clock import EASTERN
 from ..domain.enums import Channel
 from ..guardrails import EmergencyAssessment, EmergencyCheck, detect_emergency, fence_untrusted
 from ..knowledge import branches
@@ -247,8 +248,10 @@ class AgentNodes:
         window = look.data.get("appointment_window") if look.ok else None
         if not window:
             return 0
+        # Build the appointment in EASTERN (the tz the BookingService uses) so the previewed fee
+        # matches the fee the service will actually charge, even across a DST boundary.
         appt = datetime.fromisoformat(f"{window['date']}T{window['start_time']}:00").replace(
-            tzinfo=now.tzinfo
+            tzinfo=EASTERN
         )
         return cancellation_fee((appt - now).total_seconds() / 3600.0)
 

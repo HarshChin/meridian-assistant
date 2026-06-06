@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import io
 
+import pytest
+
 from meridian.agent import TurnResult
-from meridian.cli import _trace_summary, handle_turn, run_demo
+from meridian.cli import DEMO_SCRIPT, _trace_summary, handle_turn, main, repl, run_demo
+from meridian.domain.enums import Channel
 from meridian.tracing.trace import ToolCallTrace, TurnTrace
 
 
@@ -92,3 +95,40 @@ def test_trace_summary_includes_key_fields() -> None:
     assert "intent=book" in summary
     assert "create_booking*" in summary  # mutating marked with *
     assert "committed=BK-9" in summary
+
+
+def test_repl_handles_input_commands_and_quit(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = StubRunner([_answer("hello there")])
+    scripted = iter(["hi", "", "/trace", "/quit", "should-not-run"])
+    monkeypatch.setattr("builtins.input", lambda *_a: next(scripted))
+    out = io.StringIO()
+    repl(runner, out)
+    text = out.getvalue()
+    assert "hello there" in text  # the 'hi' turn ran
+    assert "trace:" in text  # /trace printed a summary of the last turn
+    assert runner.run_calls == [("cli", "hi")]  # empty input + commands did not call the agent
+
+
+def test_repl_eof_says_goodbye(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _raise(*_a: object) -> str:
+        raise EOFError
+
+    monkeypatch.setattr("builtins.input", _raise)
+    out = io.StringIO()
+    repl(StubRunner([]), out)
+    assert "Goodbye" in out.getvalue()
+
+
+def test_main_demo_wires_flags_to_build_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = StubRunner([_answer(f"reply {i}") for i in range(len(DEMO_SCRIPT))])
+    captured: dict[str, object] = {}
+
+    def fake_build(**kwargs: object) -> StubRunner:
+        captured.update(kwargs)
+        return runner
+
+    monkeypatch.setattr("meridian.cli.build_runner", fake_build)
+    code = main(["--demo", "--system-clock", "--channel", "web_chat"])
+    assert code == 0
+    assert captured == {"frozen_clock": False, "channel": Channel.WEB_CHAT}
+    assert len(runner.run_calls) == len(DEMO_SCRIPT)  # every scripted message was replayed
