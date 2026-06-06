@@ -79,18 +79,32 @@ documents* exposed them (§3.5).
 
 ## 2. Ingestion & parsing
 
-### 2.1 Sliding-window chunking → structure-aware chunking
-- **First approach.** Fixed-size sliding-window chunks over the extracted text.
-- **Why it was wrong.** It split semantic units that must stay whole for correct retrieval and
-  extraction — a fee-tier list, a coverage table, or an FAQ Q&A cut across two chunks retrieves
-  partially and answers wrongly.
-- **How we found it.** Review feedback to use genuinely structure-aware chunking.
-- **The fix.** Derive headings generically from **font size** (relative to the body-text mode, plus
-  a "ends in ?" rule for FAQ questions), then chunk by section — keeping a whole table, plan
-  comparison, or Q&A as one chunk, with a sliding-window fallback only when a document has no
-  detectable structure. This is document-agnostic (no per-doc rules).
+### 2.1 Chunking: fixed-size → sliding-window → structure-aware
+- **The ladder we worked through.** Chunking quality directly bounds both retrieval recall *and*
+  grounded-extraction completeness, so we climbed the standard ladder, and each rung fixed a
+  concrete failure of the one below:
+  1. **Fixed-size** (split every N tokens/chars, no overlap) — the textbook baseline. Rejected on
+     sight for this corpus: it slices mid-row and mid-list, so a coverage-table row or a fee tier is
+     severed from its header/context and is cleanly retrievable from neither side.
+  2. **Sliding-window** (fixed-size *with* overlap) — our **first implementation**. The overlap
+     means a fact near a boundary appears whole in at least one window, which is strictly better
+     than fixed-size. But it is still **structure-blind**: it splits a table from its header and a
+     fee-tier list across windows, returns chunks that are half one section and half another, and
+     pays for the safety with redundant overlapped text.
+  3. **Structure-aware** (chunk on the document's real structure) — what we **shipped**.
+- **Why sliding-window wasn't enough (how we found it).** Review feedback pushed for genuinely
+  structure-aware chunking; inspecting the sliding-window output showed semantic units (a whole
+  coverage table, a plan comparison, an FAQ Q&A) split across boundaries — the exact thing that
+  later breaks retrieval recall and grounded extraction (see §3.2).
+- **The fix.** Derive headings **generically from font size** (relative to the body-text mode, plus
+  an "ends in ?" rule for FAQ questions), then chunk by section — keeping a whole table, plan
+  comparison, or Q&A intact — and **keep sliding-window as the fallback** for any document that
+  exposes no detectable structure. This is document-agnostic (no per-document rules), so it
+  generalizes to an arbitrary corpus, and the lower rung survives as a graceful degradation rather
+  than being discarded.
 - **Status now.** 48 structure-aware chunks; tests assert tables/plans stay intact and FAQ Q&As
-  split correctly.
+  split correctly. *(Interview point: each rung solved a real failure of the rung below, and we
+  retained sliding-window as the fallback rather than betting the whole corpus is well-structured.)*
 
 ### 2.2 PyMuPDF vs pdfplumber, and the ✓/✗ glyph artifacts
 - **First approach.** Considered PyMuPDF for parsing; the coverage tables use ✓/✗ marks.
@@ -234,6 +248,53 @@ documents* exposed them (§3.5).
 - **Status now.** Minor, but closed.
 
 ---
+
+## 5. Alternatives we considered and deliberately did *not* adopt (right-sizing)
+
+These are **not flaws** — they are choices where the obvious heavier option was rejected for a
+pragmatic one. Included because an interviewer is likely to probe "why didn't you use X?". Marked
+**[built]** (in the repo today) vs **[planned]** (a later phase, decision already made).
+
+- **Embeddings — task-type / API embeddings → local `bge-base` with query/document prefixing.**
+  **[built]** Considered Nomic-v1.5 task embeddings and Gemini/Voyage API embeddings; rejected
+  because the gain is marginal on a ~50-chunk, lexically-distinctive corpus and API variants break
+  the offline/reproducible/keyless guarantee. bge-base's asymmetric query/doc prefixing is already
+  task-aware-for-retrieval and runs locally via ONNX.
+- **Retrieval — hybrid BM25 + dense, fused with RRF (k≈15, not the web-scale 60).** **[built]**
+  Digits/ZIPs/prices need lexical; prose needs semantic. RRF k is tuned for a small corpus; the
+  principle is "ship the simpler single leg if fusion doesn't beat it at recall."
+- **Vector store — Chroma (HNSW) default, with a NumPy exact backend + a parity test.** **[built]**
+  HNSW (ANN) is over-spec'd at ~48 chunks (ANN targets 10⁵⁺), so it returns effectively-exact
+  top-k here. We keep it for the persistence/metadata/scale story and turn the over-spec into a
+  *validation artifact*: a test asserts HNSW top-k == exact top-k, with a `chunk_id` tie-break for
+  determinism.
+- **Reranker — none by default.** **[built: omitted]** A cross-encoder reranker is overkill at this
+  scale; the chunk-level retrieval metrics decide, and it can be added later if a precision gap
+  appears. We did not add a no-op hook we couldn't test.
+- **Abstention — calibrated thresholds, not a fixed cutoff.** **[built]** Dense-cosine
+  HIGH/MEDIUM/LOW bands (τ tuned empirically on real in- vs off-corpus cosines) so the assistant
+  hands off rather than guesses when the corpus likely can't answer.
+- **Eval — Ragas demoted from the harness to an optional, import-guarded extra.** **[planned, P7]**
+  Initially a core dependency; demoted so a Ragas/LangChain install conflict can never block the
+  keyless CI gate. Plan: deterministic tier is the gate; an LLM judge covers what fact-match can't;
+  Ragas is a directional cross-check, never headline.
+- **LLM judge — a *stronger, different* model judges, not the generator.** **[planned, P7]** Avoids
+  same-model self-preference bias; judge samples will be cached so the judged tier reproduces
+  offline.
+- **Interface — Streamlit → React/Vite SPA → minimal static HTML.** **[planned, P8]** Streamlit
+  first; considered a full SPA; settled on a vanilla static page (no build step) so the repo
+  clones-and-runs with near-zero front-end risk. The CLI is the canonical, testable interface; the
+  web demo is explicitly non-blocking.
+- **Booking statuses — three disjoint enums, not one union.** **[built]** The spec's create/lookup/
+  modify status vocabularies are disjoint; modelling them as separate enums makes illegal states
+  (e.g. `rescheduled` on a create response) unrepresentable rather than merely discouraged.
+- **Time — an injected `Clock`, never `datetime.now()` in logic.** **[built]** Fees/windows are
+  time-dependent; injecting a frozen clock makes every boundary case deterministic and testable.
+- **Runtime — Python 3.12 (planned) → 3.11 (used).** **[built]** 3.11 is the installed interpreter,
+  fully supported, and satisfies the real intent (avoid Python 3.14's bleeding-edge wheel gaps).
+  See `ASSUMPTIONS.md` #8.
+- **Portability — `zoneinfo` needed `tzdata` on Windows.** **[built]** Hit `ZoneInfoNotFoundError`
+  on Windows; fixed by pinning the `tzdata` package rather than hand-rolling timezone offsets.
 
 ## Where we stand now
 
