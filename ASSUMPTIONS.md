@@ -18,12 +18,16 @@ over it. Finding and handling them transparently is part of the deliverable.
    Manager**, never silently booked on an inferred eligibility. (An earlier prototype carried a
    hand-authored branch-city `overrides.yaml`; it was removed when all facts moved to grounded
    extraction — hand-authoring a coverage fact the document does not state is exactly what the
-   design forbids.) The eval grades the **disclosure/escalation invariant**, not "a booking
-   happened," and uses a genuinely in-range ZIP (**22032**) for the unambiguous success case.
+   design forbids.) The unlisted-ZIP → `unknown` → **escalate** behavior is asserted directly by
+   the coverage unit tests (`tests/unit/test_grounded_coverage.py`, which include 22046, the
+   Fairfax/Arlington range gaps, Manassas 20110, and the South region). The conformance eval
+   grades the **never-silently-book invariant** on out-of-area ZIPs (Loudoun 20147 → answer, no
+   commit) and uses an in-range Fairfax ZIP (**22030**) for the unambiguous booking-success case.
 
 2. **Test #5 says "Friday the 24th," but 2026-01-24 is a Saturday.** Source self-contradiction.
-   We treat the **ISO date** as authoritative and add a calendar-consistency assertion in the
-   eval (`weekday(date) == stated_weekday`) that flags the mismatch instead of hiding it.
+   We treat the **ISO date** as authoritative; relative phrases are resolved deterministically in
+   code (never guessed by the LLM). The eval's reschedule case books the ISO date 2026-01-24 and
+   asserts the API afternoon band (2:00–6:00 PM) in the reply; we do not assert the stated weekday.
 
 3. **Appointment-window width.** `09_faq_booking.pdf` says appointments use "2-hour windows,"
    but `12_booking_api_spec.pdf`'s own example maps `afternoon → 14:00–18:00` (a 4-hour band).

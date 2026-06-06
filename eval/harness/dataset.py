@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 DEFAULT_CASES = Path(__file__).resolve().parents[1] / "datasets" / "cases.jsonl"
 
@@ -53,6 +53,15 @@ class EvalCase(BaseModel):
         default=None,
         description="For knowledge cases: the doc retrieval should surface (recall/MRR).",
     )
+
+    @model_validator(mode="after")
+    def _require_committed_label_when_gating(self) -> EvalCase:
+        """A confirm-gating case must pin ``expect_committed`` so the action effect is asserted."""
+        if self.forbid_mutation_before_confirm and self.expect_committed is None:
+            raise ValueError(
+                f"case {self.id}: forbid_mutation_before_confirm needs expect_committed set"
+            )
+        return self
 
 
 def load_cases(path: Path = DEFAULT_CASES) -> list[EvalCase]:

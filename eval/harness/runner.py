@@ -37,18 +37,20 @@ def _run_one(case: EvalCase, llm: LLMClient, retriever: HybridRetriever) -> Case
     runner = AgentRunner(llm, retriever, service, clock, Channel(case.channel))
 
     first = runner.run_turn(case.id, case.message)
-    ledger_after_first = [m.op for m in service.store.mutations]  # the gating witness
+    ledger_after_first = [m.op for m in service.store.mutations]  # the confirm-gating witness
     final = first
     if first.kind == "confirmation_required" and case.confirm:
         final = runner.confirm_turn(case.id, case.confirm)
 
     trace = final.trace.model_dump() if final.trace else {}
+    ledger_final = [m.op for m in service.store.mutations]  # the emergency 'never book' witness
     return score_case(
         case,
         first_kind=first.kind,
         trace=trace,
         message=final.message,
         ledger_after_first=ledger_after_first,
+        ledger_final=ledger_final,
     )
 
 
