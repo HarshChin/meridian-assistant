@@ -38,6 +38,9 @@ class TurnTrace(BaseModel):
     # retrieval / grounding
     retrieval_confidence: str | None = None
     citations: list[str] = Field(default_factory=list)
+    grounded: bool | None = Field(
+        default=None, description="True if the emitted knowledge answer carried an inline citation."
+    )
 
     # tool use
     tool_calls: list[ToolCallTrace] = Field(default_factory=list)

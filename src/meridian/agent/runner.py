@@ -56,11 +56,19 @@ class AgentRunner:
     def run_turn(self, session_id: str, message: str) -> TurnResult:
         """Run a new customer message; may return an answer, a handoff, or a confirmation prompt."""
         trace = TurnTrace(channel=self._channel.value, user_message=message)
-        state = {
+        state: dict[str, Any] = {
             "user_message": message,
             "channel": self._channel.value,
             "now_iso": self._clock.now().isoformat(),
             "trace": trace,
+            # Clear any per-turn state left in the checkpoint (e.g. a prior booking that paused at
+            # confirm but was never resumed) so a stale proposed_action can never carry over.
+            "proposed_action": None,
+            "route": "",
+            "confirmation_decision": None,
+            "confirmation_preview": None,
+            "respond_kind": "",
+            "respond_facts": {},
         }
         config = {"configurable": {"thread_id": session_id}}
         result = self._graph.invoke(state, config)
@@ -69,6 +77,9 @@ class AgentRunner:
     def confirm_turn(self, session_id: str, decision: str) -> TurnResult:
         """Resume a paused booking with the customer's approve/decline decision."""
         config = {"configurable": {"thread_id": session_id}}
+        snapshot = self._graph.get_state(config)
+        if not snapshot or not snapshot.next:  # nothing is awaiting confirmation on this thread
+            return TurnResult(kind="answer", message="There's nothing awaiting confirmation.")
         result = self._graph.invoke(Command(resume=decision), config)
         return self._to_result(result, config)
 

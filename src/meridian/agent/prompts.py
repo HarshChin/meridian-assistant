@@ -7,6 +7,13 @@ deterministically and handed to the respond step.
 
 from __future__ import annotations
 
+EMERGENCY_SYSTEM = """You are a SAFETY classifier for a home-services company. Decide whether the \
+customer's message plausibly describes an EMERGENCY needing immediate dispatch: an active water \
+leak or flooding; no heat in freezing conditions; no cooling in dangerous heat; an electrical \
+hazard (burning smell, sparking, shock, smoke); a gas leak or carbon monoxide; or a sewage \
+backup. Be RECALL-BIASED: if it could plausibly be an emergency, set is_emergency=true. Routine \
+repairs, maintenance, pricing/policy questions, and bookings are NOT emergencies."""
+
 CLASSIFY_SYSTEM = """You are the intent classifier for Meridian Home Services (HVAC, plumbing, \
 and electrical). Classify the customer's latest message and extract any booking details present.
 

@@ -79,6 +79,13 @@ def test_booking_confirms_then_commits_and_ledger_proves_order(
     assert step2.trace is not None and step2.trace.committed is True
     assert (step2.trace.committed_booking_id or "").startswith("BK-")
     assert [m.op for m in service.store.mutations] == ["create"]  # exactly one, after approval
+    # the trace SURVIVES the confirm interrupt: pre-confirm intent + the read-only coverage
+    # check that proves confirm-before-commit are both present on the committed turn's trace.
+    assert step2.trace.intent == "book"
+    assert any(c.name == "check_service_area" for c in step2.trace.tool_calls)
+    assert any(
+        c.name == "create_booking" and c.capability == "mutating" for c in step2.trace.tool_calls
+    )
 
 
 def test_decline_leaves_ledger_empty(llm: LLMClient, retriever: HybridRetriever) -> None:

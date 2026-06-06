@@ -77,3 +77,20 @@ over it. Finding and handling them transparently is part of the deliverable.
     *"Emergency dispatch fees ($99 plumbing, $89 HVAC)"*; both are compiled. The fee lives in the
     emergencies FAQ rather than the HVAC pricing sheet, so the fee extractor selects documents by
     relevance (not a fixed top-N) to capture it.
+
+13. **Emergency detection is rules-first + an LLM paraphrase union, screened per message.** A
+    recall-biased keyword set (code, doc-11 provenance) runs first; the safety node then adds an
+    LLM paraphrase-catch that may only *add* an emergency, never veto one. We deliberately
+    simplify the threshold-conditional triggers (no-heat below 40°F / no-cooling above 95°F) to
+    phrase matches, and screen only the latest message (a hazard disclosed in an earlier turn is
+    caught when stated, not re-screened on a later follow-up).
+
+14. **Agent abstention is keyed on dense-cosine confidence.** The retriever fuses dense + BM25
+    (RRF) for ranking, but the HIGH/MEDIUM/LOW abstention band uses the top dense cosine; a purely
+    lexical match could under-score. Thresholds are tuned on a held-out probe; documented here as
+    a deliberate, tunable choice rather than a bug.
+
+15. **The agent's `TurnTrace` is checkpointed as a pydantic object via the in-memory saver.**
+    Under the pinned LangGraph this is fine; moving to a persistent checkpointer (SQLite/Postgres)
+    or a future strict-msgpack default would require registering the type or storing it as a dict.
+    Flagged as a forward-compatibility note, not a current defect.

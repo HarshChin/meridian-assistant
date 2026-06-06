@@ -7,6 +7,7 @@ commit, so a booking can never be created/changed without an explicit, approved 
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -16,21 +17,37 @@ from .nodes import AgentNodes
 from .state import AgentState
 
 
+def _carries_trace(node: Callable[[AgentState], dict[str, Any]]) -> Any:
+    """Ensure a node's output always re-emits the (mutated) trace so it is checkpointed.
+
+    Nodes mutate ``state['trace']`` in place; LangGraph only persists what a node RETURNS, so
+    without this every trace write made before the confirm interrupt would be lost on the
+    resumed turn. Returning the trace each step keeps it whole across the interrupt.
+    """
+
+    def wrapped(state: AgentState) -> dict[str, Any]:
+        result = node(state)
+        result.setdefault("trace", state.get("trace"))
+        return result
+
+    return wrapped
+
+
 def build_graph(nodes: AgentNodes, checkpointer: Any | None = None) -> Any:
     """Compile the agent graph with a checkpointer (defaults to in-memory)."""
     graph = StateGraph(AgentState)
 
-    graph.add_node("safety", nodes.safety)
-    graph.add_node("classify", nodes.classify)
-    graph.add_node("retrieve", nodes.retrieve)
-    graph.add_node("answer", nodes.answer)
-    graph.add_node("lookup", nodes.lookup)
-    graph.add_node("plan_booking", nodes.plan_booking)
-    graph.add_node("clarify", nodes.clarify)
-    graph.add_node("confirm", nodes.confirm)
-    graph.add_node("commit", nodes.commit)
-    graph.add_node("respond", nodes.respond)
-    graph.add_node("handoff", nodes.handoff)
+    graph.add_node("safety", _carries_trace(nodes.safety))
+    graph.add_node("classify", _carries_trace(nodes.classify))
+    graph.add_node("retrieve", _carries_trace(nodes.retrieve))
+    graph.add_node("answer", _carries_trace(nodes.answer))
+    graph.add_node("lookup", _carries_trace(nodes.lookup))
+    graph.add_node("plan_booking", _carries_trace(nodes.plan_booking))
+    graph.add_node("clarify", _carries_trace(nodes.clarify))
+    graph.add_node("confirm", _carries_trace(nodes.confirm))
+    graph.add_node("commit", _carries_trace(nodes.commit))
+    graph.add_node("respond", _carries_trace(nodes.respond))
+    graph.add_node("handoff", _carries_trace(nodes.handoff))
 
     graph.add_edge(START, "safety")
     graph.add_conditional_edges(

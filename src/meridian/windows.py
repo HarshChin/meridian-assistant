@@ -93,10 +93,15 @@ def resolve_relative_date(text: str, now: datetime) -> date | None:
     if "tomorrow" in s:
         return today + timedelta(days=1)
 
-    for name, idx in _WEEKDAYS.items():
-        if re.search(rf"\b{name}\b", s):
-            delta = (idx - today.weekday()) % 7 or 7  # always strictly future
-            return today + timedelta(days=delta)
+    mentioned = [(name, idx) for name, idx in _WEEKDAYS.items() if re.search(rf"\b{name}\b", s)]
+    # Ambiguous phrasing (several weekdays, or "the X after next") → return None so the agent
+    # asks rather than silently picking one.
+    if len({name for name, _ in mentioned}) > 1 or "after next" in s:
+        return None
+    if mentioned:
+        idx = mentioned[0][1]
+        delta = (idx - today.weekday()) % 7 or 7  # always strictly future
+        return today + timedelta(days=delta)
 
     dom = re.search(r"\bthe (\d{1,2})(?:st|nd|rd|th)?\b", s)
     if dom:

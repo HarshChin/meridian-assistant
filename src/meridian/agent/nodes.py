@@ -9,6 +9,7 @@ approved ``confirm`` interrupt, so confirm-before-commit is guaranteed by the gr
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -16,15 +17,21 @@ from typing import Any
 from langgraph.types import interrupt
 
 from ..domain.enums import Channel
-from ..guardrails import detect_emergency, fence_untrusted
+from ..guardrails import EmergencyAssessment, EmergencyCheck, detect_emergency, fence_untrusted
 from ..knowledge import branches
 from ..knowledge.fees import cancellation_fee
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, LLMUnavailableError
 from ..retrieval.confidence import Confidence
 from ..tools import ToolRegistry, ToolResult
 from ..tracing.trace import ToolCallTrace
 from ..windows import resolve_relative_date
-from .prompts import ANSWER_SYSTEM, CLARIFY_SYSTEM, CLASSIFY_SYSTEM, RESPOND_SYSTEM
+from .prompts import (
+    ANSWER_SYSTEM,
+    CLARIFY_SYSTEM,
+    CLASSIFY_SYSTEM,
+    EMERGENCY_SYSTEM,
+    RESPOND_SYSTEM,
+)
 from .state import AgentState, Classification
 
 _APPROVE = {"approve", "yes", "y", "confirm", "ok", "proceed", "book it", "go ahead"}
@@ -76,11 +83,26 @@ class AgentNodes:
         return {"route": "respond", "respond_kind": kind, "respond_facts": facts}
 
     # ------------------------------------------------------------------ nodes
+    def _emergency_llm_union(self, message: str) -> EmergencyAssessment | None:
+        """LLM paraphrase-catch: may only ADD an emergency the rules missed, never veto one."""
+        try:
+            check = self._ctx.llm.structured(EMERGENCY_SYSTEM, message, EmergencyCheck)
+        except LLMUnavailableError:
+            return None  # rules-only fallback when no key/cache (the LLM leg is best-effort)
+        if check.is_emergency:
+            return EmergencyAssessment(
+                is_emergency=True, category=check.category or "llm_detected", matched="llm"
+            )
+        return None
+
     def safety(self, state: AgentState) -> dict[str, Any]:
-        """Rules-first emergency screen (runs first); an emergency short-circuits to handoff."""
-        assessment = detect_emergency(state["user_message"])
+        """Rules-first emergency screen + an LLM paraphrase union (adds only); else continue."""
+        message = state["user_message"]
+        assessment = detect_emergency(message)
+        if not assessment.is_emergency:
+            assessment = self._emergency_llm_union(message) or assessment
         if assessment.is_emergency:
-            category = (assessment.category or "").replace("_", " ")
+            category = (assessment.category or "emergency").replace("_", " ")
             state["trace"].emergency = True
             state["trace"].note(f"emergency rule: {assessment.category} ('{assessment.matched}')")
             return {
@@ -113,8 +135,24 @@ class AgentNodes:
         )
         user = f"Customer question:\n{state['user_message']}\n\nKnowledge passages:\n{passages}"
         text = self._ctx.llm.complete(ANSWER_SYSTEM, user)
-        state["trace"].route = "answer"
-        state["trace"].final_answer = text
+        trace = state["trace"]
+        # Deterministic groundedness gate: an answer with no inline citation is not grounded —
+        # abstain to a human rather than present an uncited claim as documented fact.
+        if "[source:" not in text:
+            trace.grounded = False
+            trace.handoff = True
+            trace.handoff_category = "low_confidence"
+            trace.handoff_reason = "Could not ground an answer in the documents."
+            trace.route = "handoff"
+            message = (
+                "I want to be sure I give you accurate information, and I can't confirm that "
+                "from our documents — let me connect you with a Meridian specialist."
+            )
+            trace.final_answer = message
+            return {"final_answer": message, "route": "handoff"}
+        trace.grounded = True
+        trace.route = "answer"
+        trace.final_answer = text
         return {"final_answer": text, "route": "answer"}
 
     def lookup(self, state: AgentState) -> dict[str, Any]:
@@ -135,9 +173,14 @@ class AgentNodes:
         intent = state["intent"]
         slots = state.get("slots", {})
         now = self._now(state)
-        resolved = (
-            resolve_relative_date(slots["date_phrase"], now) if slots.get("date_phrase") else None
-        )
+        date_phrase = slots.get("date_phrase")
+        # Don't trust an ISO date the customer did not literally type — if the LLM normalised a
+        # relative phrase into a calendar date, ignore it so the date is resolved in code (or we
+        # clarify). Relative phrases are resolved deterministically by resolve_relative_date.
+        iso = re.search(r"\d{4}-\d{2}-\d{2}", date_phrase or "")
+        if iso and iso.group(0) not in state["user_message"]:
+            date_phrase = None
+        resolved = resolve_relative_date(date_phrase, now) if date_phrase else None
 
         if intent == "book":
             if not slots.get("zip_code") or not slots.get("service_type"):
@@ -241,6 +284,11 @@ class AgentNodes:
 
     def commit(self, state: AgentState) -> dict[str, Any]:
         """Execute the approved mutating action — the ONLY place a booking is created/changed."""
+        # Defense-in-depth: never mutate without an approval recorded on THIS turn. The graph
+        # topology already guarantees commit is only reached via confirm, but this makes
+        # confirm-before-commit a per-action invariant rather than a purely topological one.
+        if state.get("confirmation_decision") != "approve":
+            return self._respond("declined", {})
         action = state["proposed_action"] or {}
         result = self._run_tool(state, action["tool"], action["args"], allow_mutations=True)
         data = result.data
