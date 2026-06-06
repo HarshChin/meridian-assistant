@@ -1,0 +1,6 @@
+{
+  "embed_model": "BAAI/bge-base-en-v1.5",
+  "n_chunks": 48,
+  "n_docs": 11,
+  "corpus_hash": "70da4c86f71ab56d"
+}

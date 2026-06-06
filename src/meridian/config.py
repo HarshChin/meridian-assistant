@@ -57,8 +57,14 @@ class Settings(BaseSettings):
     top_k: int = Field(default=5, description="Chunks handed to the answer model.")
     candidate_k: int = Field(default=8, description="Candidates fetched per retriever leg.")
     rrf_k: int = Field(default=15, description="RRF constant, tuned for a small corpus (not 60).")
-    tau_high: float = Field(default=0.55, description="Dense-cosine floor for HIGH confidence.")
-    tau_low: float = Field(default=0.35, description="Dense-cosine floor below which we abstain.")
+    tau_high: float = Field(
+        default=0.62,
+        description="Dense-cosine floor for HIGH confidence (tuned on a held-out probe).",
+    )
+    tau_low: float = Field(
+        default=0.53,
+        description="Dense-cosine floor below which we abstain to a human handoff.",
+    )
 
     # --- Booking API ---
     booking_api_base_url: str = Field(
