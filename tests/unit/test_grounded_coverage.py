@@ -1,36 +1,18 @@
-"""Grounded service-area resolver: reproduces every documented coverage edge, keyless.
+"""Service-area coverage reproduces every documented edge — keyless, deterministic.
 
-This is the generalization-critical test: coverage is derived by an LLM extracting structure
-from the corpus (no hand-authored facts), then deterministic ZIP-membership logic. It replays
-the committed extraction cache, so it runs without an API key — but proves the grounded path
-yields document-faithful decisions (gaps, pending, sub-contracted, partner-referral,
-coordination, and out-of-area escalation).
+``check_coverage`` applies deterministic ZIP-range logic to ``data/extracted/coverage.json``,
+which is compiled from the service-area documents by :mod:`meridian.extraction` (no hand-authored
+facts). No LLM or retrieval runs here — a retrieval glitch can never change who we book. Covers
+in-range, the ZIP-range *gaps* a naive min-max parser would wrongly include, pending,
+sub-contracted, partner-referral, coordination, and document-faithful out-of-area escalation.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from meridian.config import get_settings
 from meridian.domain.enums import ServiceType
-from meridian.extraction.service_area import ServiceAreaResolver
-from meridian.llm.client import LLMClient
-from meridian.retrieval.retriever import HybridRetriever
-
-_SETTINGS = get_settings()
-_INDEX = _SETTINGS.index_dir
-_CACHE = _SETTINGS.llm_cache_dir
-
-pytestmark = pytest.mark.skipif(
-    not (_INDEX / "chunks.jsonl").exists() or not any(_CACHE.glob("*.json")),
-    reason="needs committed index + LLM cache (run `make ingest` / build the extraction cache)",
-)
-
-
-@pytest.fixture(scope="module")
-def resolver() -> ServiceAreaResolver:
-    return ServiceAreaResolver(HybridRetriever.load(), LLMClient())
-
+from meridian.knowledge.coverage import check_coverage
 
 # zip, service, expected eligibility, (flag_name, expected_value) or None, expected region
 _EDGES = [
@@ -56,15 +38,14 @@ _EDGES = [
 
 
 @pytest.mark.parametrize(("zip_code", "service", "eligibility", "flag", "region"), _EDGES)
-def test_grounded_coverage_edges(
-    resolver: ServiceAreaResolver,
+def test_coverage_edges(
     zip_code: str,
     service: str,
     eligibility: str,
     flag: tuple[str, object] | None,
     region: str | None,
 ) -> None:
-    decision = resolver.check(zip_code, ServiceType(service))
+    decision = check_coverage(zip_code, ServiceType(service))
     assert decision.eligibility.value == eligibility
     assert (decision.region.value if decision.region else None) == region
     if flag is not None:
@@ -76,7 +57,13 @@ def test_grounded_coverage_edges(
             assert actual == expected
 
 
-def test_invalid_zip_is_unknown(resolver: ServiceAreaResolver) -> None:
-    decision = resolver.check("2204", ServiceType.HVAC)
-    assert decision.eligibility.value == "unknown"
-    assert decision.source == "none"
+def test_documented_source_for_covered_zip() -> None:
+    decision = check_coverage("22032", ServiceType.HVAC)
+    assert decision.source == "documented"
+    assert decision.primary_branch == "Falls Church"
+    assert decision.county == "Fairfax"
+
+
+def test_invalid_zip_is_unknown() -> None:
+    assert check_coverage("2204", ServiceType.HVAC).eligibility.value == "unknown"
+    assert check_coverage("abcde", ServiceType.HVAC).source == "none"

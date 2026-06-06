@@ -1,0 +1,186 @@
+{
+  "counties": [
+    {
+      "county": "Montgomery",
+      "region": "central",
+      "zip_segments": [
+        {
+          "low": 20814,
+          "high": 20818
+        },
+        {
+          "low": 20832,
+          "high": 20832
+        },
+        {
+          "low": 20833,
+          "high": 20833
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Howard",
+      "region": "central",
+      "zip_segments": [
+        {
+          "low": 21042,
+          "high": 21042
+        },
+        {
+          "low": 21043,
+          "high": 21043
+        },
+        {
+          "low": 21044,
+          "high": 21044
+        },
+        {
+          "low": 21045,
+          "high": 21045
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Prince George's",
+      "region": "central",
+      "zip_segments": [
+        {
+          "low": 20706,
+          "high": 20706
+        },
+        {
+          "low": 20707,
+          "high": 20707
+        },
+        {
+          "low": 20708,
+          "high": 20708
+        },
+        {
+          "low": 20742,
+          "high": 20742
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "not_available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": "EcoPower",
+      "coordination_zips": [
+        20742
+      ]
+    },
+    {
+      "county": "Fairfax",
+      "region": "north",
+      "zip_segments": [
+        {
+          "low": 22030,
+          "high": 22039
+        },
+        {
+          "low": 22041,
+          "high": 22044
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "available",
+      "primary_branch": "Falls Church",
+      "overflow_branch": "Tysons",
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Arlington",
+      "region": "north",
+      "zip_segments": [
+        {
+          "low": 22201,
+          "high": 22209
+        },
+        {
+          "low": 22213,
+          "high": 22213
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "available",
+      "primary_branch": "Falls Church",
+      "overflow_branch": "Tysons",
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Alexandria",
+      "region": "north",
+      "zip_segments": [
+        {
+          "low": 22301,
+          "high": 22315
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "pending",
+      "primary_branch": "Falls Church",
+      "overflow_branch": "Tysons",
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Loudoun",
+      "region": "north",
+      "zip_segments": [
+        {
+          "low": 20147,
+          "high": 20147
+        },
+        {
+          "low": 20148,
+          "high": 20148
+        },
+        {
+          "low": 20164,
+          "high": 20164
+        },
+        {
+          "low": 20165,
+          "high": 20165
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "subcontracted",
+      "electrical": "not_available",
+      "primary_branch": "Herndon",
+      "overflow_branch": null,
+      "same_day_blocked": true,
+      "refer_partner": null,
+      "coordination_zips": []
+    }
+  ],
+  "out_of_area_policy": "ZIPs not listed escalate to Branch Manager for spot-approval.",
+  "travel_surcharge_usd": 45
+}

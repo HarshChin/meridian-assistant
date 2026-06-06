@@ -1,0 +1,11 @@
+{
+  "free_notice_hours": 24,
+  "late_cancel_threshold_hours": 2,
+  "late_cancel_fee_usd": 35,
+  "no_show_fee_usd": 75,
+  "no_show_waiver_period_months": 12,
+  "weekday_after_hours_usd": 75,
+  "sunday_holiday_usd": 125,
+  "business_hours_start_hour": 7,
+  "business_hours_end_hour": 18
+}

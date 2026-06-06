@@ -19,7 +19,7 @@ def test_emergency_line() -> None:
 def test_eleven_branches_three_regions() -> None:
     rows = branches.list_branches()
     assert len(rows) == 11
-    regions = {b["region"] for b in rows}
+    regions = {b.region for b in rows}
     assert regions == {"north", "central", "south"}
 
 

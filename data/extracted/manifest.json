@@ -1,0 +1,30 @@
+{
+  "compiled_at": "2026-06-06",
+  "model": "claude-sonnet-4-6",
+  "corpus_hash": "70da4c86f71ab56d",
+  "capabilities": {
+    "coverage": {
+      "schema": "ServiceAreaExtraction",
+      "source_docs": [
+        "service_area_central",
+        "service_area_north"
+      ]
+    },
+    "fees": {
+      "schema": "FeeSchedule",
+      "source_docs": [
+        "cancellation_policy",
+        "electrical_pricing",
+        "hvac_pricing",
+        "plumbing_pricing"
+      ]
+    },
+    "branches": {
+      "schema": "BranchDirectory",
+      "source_docs": [
+        "branch_hours",
+        "faq_emergencies"
+      ]
+    }
+  }
+}

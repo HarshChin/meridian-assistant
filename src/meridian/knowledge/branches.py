@@ -1,40 +1,35 @@
-"""Branch directory + operating hours (from ``data/branches.yaml``)."""
+"""Branch directory + operating hours, from the COMPILED branch record.
+
+The branch directory is extracted from the branch-hours document at compile time
+(:mod:`meridian.extraction`) and committed; this module applies deterministic day-of-week
+logic to it — no LLM or retrieval at runtime.
+"""
 
 from __future__ import annotations
 
-import functools
 from datetime import date
-from typing import Any
 
-import yaml
+from ..extraction.schemas import BranchHours
+from .loader import load_branches
 
-from ..config import get_settings
-
-# weekday() 0..6 (Mon..Sun) → the YAML key holding that day's hours.
-_DAY_KEYS: tuple[str, ...] = ("mon_fri", "mon_fri", "mon_fri", "mon_fri", "mon_fri", "sat", "sun")
-
-
-@functools.lru_cache(maxsize=1)
-def _load() -> dict[str, Any]:
-    """Load and cache the branch directory YAML."""
-    path = get_settings().data_dir / "branches.yaml"
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+# weekday() 0..6 (Mon..Sun) → the BranchHours attribute holding that day's hours.
+_DAY_ATTRS: tuple[str, ...] = ("mon_fri", "mon_fri", "mon_fri", "mon_fri", "mon_fri", "sat", "sun")
 
 
 def emergency_line() -> str:
     """Return the 24/7 emergency phone number."""
-    return str(_load()["emergency_line"])
+    return load_branches().emergency_line
 
 
-def list_branches() -> list[dict[str, Any]]:
+def list_branches() -> list[BranchHours]:
     """Return all branch records."""
-    return list(_load()["branches"])
+    return list(load_branches().branches)
 
 
-def get_branch(name: str) -> dict[str, Any] | None:
+def get_branch(name: str) -> BranchHours | None:
     """Return the branch record by name (case-insensitive), or ``None``."""
-    for branch in _load()["branches"]:
-        if branch["name"].lower() == name.lower():
+    for branch in load_branches().branches:
+        if branch.name.lower() == name.lower():
             return branch
     return None
 
@@ -44,7 +39,7 @@ def hours_on(branch_name: str, day: date) -> str | None:
     branch = get_branch(branch_name)
     if branch is None:
         return None
-    return str(branch.get(_DAY_KEYS[day.weekday()], "closed"))
+    return str(getattr(branch, _DAY_ATTRS[day.weekday()]))
 
 
 def is_open(branch_name: str, day: date) -> bool:

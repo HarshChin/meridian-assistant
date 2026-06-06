@@ -1,8 +1,8 @@
 """Appointment-window math and deterministic relative-date resolution.
 
-Window time bands and the booking horizon are loaded from ``data/policy.yaml`` (sourced
-from the API spec, doc 12); this module holds only the logic. Nothing here reads the wall
-clock — callers pass ``now``.
+Window time bands and the booking horizon are part of the Booking API contract (doc 12), so
+they come from :mod:`meridian.api_contract`; this module holds only the logic. Nothing here
+reads the wall clock — callers pass ``now``.
 """
 
 from __future__ import annotations
@@ -12,9 +12,9 @@ import re
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 
+from .api_contract import MAX_ADVANCE_DAYS, WINDOW_BANDS
 from .domain.booking import AppointmentWindow
 from .domain.enums import Window
-from .policy import get_policy
 
 SUNDAY = 6
 """Python ``date.weekday()`` value for Sunday (Mon=0 … Sun=6)."""
@@ -38,10 +38,10 @@ def _parse_hhmm(value: str) -> time:
 
 @functools.lru_cache(maxsize=1)
 def _bands() -> dict[Window, tuple[time, time]]:
-    """Build the window → time-band map from policy data."""
+    """Build the window → time-band map from the API-contract bands."""
     return {
         Window(name): (_parse_hhmm(start), _parse_hhmm(end))
-        for name, (start, end) in get_policy().booking.windows.items()
+        for name, (start, end) in WINDOW_BANDS.items()
     }
 
 
@@ -65,8 +65,8 @@ def appointment_window(window: Window, day: date) -> AppointmentWindow:
 
 
 def within_advance_window(target: date, now: datetime, max_days: int | None = None) -> bool:
-    """Return True if ``target`` is within today..now+``max_days`` (policy default) inclusive."""
-    limit = max_days if max_days is not None else get_policy().booking.max_advance_days
+    """Return True if ``target`` is within today..now+``max_days`` (contract default) inclusive."""
+    limit = max_days if max_days is not None else MAX_ADVANCE_DAYS
     today = now.date()
     return today <= target <= today + timedelta(days=limit)
 
@@ -138,7 +138,7 @@ def resolve_first_available(
     """
     predicate = is_open or _open_except_sunday
     day = now.date() + timedelta(days=1)
-    for _ in range(get_policy().booking.max_advance_days):
+    for _ in range(MAX_ADVANCE_DAYS):
         if predicate(day):
             return appointment_window(window, day)
         day += timedelta(days=1)

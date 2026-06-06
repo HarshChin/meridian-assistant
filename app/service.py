@@ -1,10 +1,11 @@
 """BookingService — the single source of truth for booking business logic.
 
 Wraps a :class:`BookingStore` with the doc-12 contract and the verified fee/window/
-coverage rules. Fee VALUES come from ``data/policy.yaml`` (see ``meridian.policy``);
-this module holds the deterministic logic that applies them. Used directly as the
-in-process double (tools + eval) and behind the FastAPI app. All time-dependent logic
-uses the injected :class:`Clock` — never the wall clock — so fees/windows are deterministic.
+coverage rules. Fee VALUES come from the COMPILED fee schedule (``meridian.knowledge.loader``,
+itself produced from the source documents by ``meridian.extraction``); this module holds the
+deterministic logic that applies them. Used directly as the in-process double (tools + eval)
+and behind the FastAPI app. All time-dependent logic uses the injected :class:`Clock` — never
+the wall clock — so fees/windows are deterministic.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import hashlib
 from datetime import date, datetime, time
 
+from meridian.api_contract import MAX_ADVANCE_DAYS
 from meridian.clock import EASTERN, Clock
 from meridian.domain.booking import AppointmentWindow
 from meridian.domain.enums import (
@@ -25,7 +27,7 @@ from meridian.domain.enums import (
 from meridian.domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
 from meridian.knowledge import branches
 from meridian.knowledge.coverage import check_coverage
-from meridian.policy import get_policy
+from meridian.knowledge.loader import load_fees
 from meridian.windows import (
     SUNDAY,
     appointment_window,
@@ -47,7 +49,7 @@ from .store import BookingRecord, BookingStore
 def cancellation_fee(notice_hours: float) -> int:
     """Fee (before any waiver) for cancelling with ``notice_hours`` of notice.
 
-    Thresholds and amounts come from ``data/policy.yaml`` (doc 07). Boundary convention:
+    Thresholds and amounts come from the compiled fee schedule (doc 07). Boundary convention:
     exactly the free-notice boundary (24h) and the late-cancel boundary (2h) → late fee.
 
     Args:
@@ -56,12 +58,12 @@ def cancellation_fee(notice_hours: float) -> int:
     Returns:
         The fee in whole USD.
     """
-    policy = get_policy().cancellation
-    if notice_hours > policy.free_notice_hours:
+    fees = load_fees()
+    if notice_hours > fees.free_notice_hours:
         return 0
-    if notice_hours >= policy.late_cancel_threshold_hours:
-        return policy.late_cancel_fee_usd
-    return policy.no_show_fee_usd
+    if notice_hours >= fees.late_cancel_threshold_hours:
+        return fees.late_cancel_fee_usd
+    return fees.no_show_fee_usd
 
 
 class BookingService:
@@ -83,8 +85,7 @@ class BookingService:
         now = self._clock.now()
         if not within_advance_window(req.preferred_date, now):
             raise InvalidInputError(
-                f"preferred_date must be within {get_policy().booking.max_advance_days} days "
-                f"(got {req.preferred_date})."
+                f"preferred_date must be within {MAX_ADVANCE_DAYS} days (got {req.preferred_date})."
             )
 
         key = self._idempotency_key(req)
@@ -183,12 +184,11 @@ class BookingService:
         now = self._clock.now()
         if not within_advance_window(req.new_date, now):
             raise InvalidInputError(
-                f"new_date must be within {get_policy().booking.max_advance_days} days "
-                f"(got {req.new_date})."
+                f"new_date must be within {MAX_ADVANCE_DAYS} days (got {req.new_date})."
             )
         notice_hours = self._notice_hours(rec, now)
         fee, waiver_used = 0, False
-        free_hours = get_policy().cancellation.free_notice_hours
+        free_hours = load_fees().free_notice_hours
         # >free-notice is free; otherwise a same-day move is free, else it is a late-cancel.
         if notice_hours <= free_hours and req.new_date != now.date():
             fee, waiver_used = self._fee_with_waiver(rec.owner_id, notice_hours)
@@ -220,9 +220,7 @@ class BookingService:
     def _fee_with_waiver(self, owner_id: str | None, notice_hours: float) -> tuple[int, bool]:
         """Compute the fee, applying the once-per-12-months no-show waiver if available."""
         base = cancellation_fee(notice_hours)
-        if base == get_policy().cancellation.no_show_fee_usd and self._store.waiver_available(
-            owner_id
-        ):
+        if base == load_fees().no_show_fee_usd and self._store.waiver_available(owner_id):
             self._store.consume_waiver(owner_id)
             return 0, True
         return base, False

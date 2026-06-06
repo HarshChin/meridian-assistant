@@ -1,0 +1,82 @@
+{
+  "emergency_line": "1-800-555-0190",
+  "branches": [
+    {
+      "name": "Falls Church",
+      "region": "north",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-16:00",
+      "sun": "emergency"
+    },
+    {
+      "name": "Tysons",
+      "region": "north",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-16:00",
+      "sun": "closed"
+    },
+    {
+      "name": "Herndon",
+      "region": "north",
+      "mon_fri": "08:00-17:00",
+      "sat": "08:00-14:00",
+      "sun": "closed"
+    },
+    {
+      "name": "Rockville",
+      "region": "central",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-16:00",
+      "sun": "emergency"
+    },
+    {
+      "name": "Columbia",
+      "region": "central",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-15:00",
+      "sun": "closed"
+    },
+    {
+      "name": "College Park",
+      "region": "central",
+      "mon_fri": "08:00-17:00",
+      "sat": "closed",
+      "sun": "closed"
+    },
+    {
+      "name": "Annapolis",
+      "region": "south",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-16:00",
+      "sun": "emergency"
+    },
+    {
+      "name": "Glen Burnie",
+      "region": "south",
+      "mon_fri": "07:00-18:00",
+      "sat": "08:00-15:00",
+      "sun": "closed"
+    },
+    {
+      "name": "Bowie",
+      "region": "south",
+      "mon_fri": "08:00-17:00",
+      "sat": "closed",
+      "sun": "closed"
+    },
+    {
+      "name": "Laurel",
+      "region": "south",
+      "mon_fri": "08:00-17:00",
+      "sat": "08:00-14:00",
+      "sun": "closed"
+    },
+    {
+      "name": "Owings Mills",
+      "region": "south",
+      "mon_fri": "08:00-17:00",
+      "sat": "closed",
+      "sun": "closed"
+    }
+  ]
+}

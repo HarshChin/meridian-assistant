@@ -1,0 +1,70 @@
+{
+  "counties": [
+    {
+      "county": "Shenandoah",
+      "region": "west",
+      "zip_segments": [
+        {
+          "low": 22810,
+          "high": 22815
+        },
+        {
+          "low": 22820,
+          "high": 22820
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "available",
+      "electrical": "not_available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": "VoltPro",
+      "coordination_zips": []
+    },
+    {
+      "county": "Clarke",
+      "region": "west",
+      "zip_segments": [
+        {
+          "low": 22600,
+          "high": 22610
+        }
+      ],
+      "hvac": "available",
+      "plumbing": "pending",
+      "electrical": "available",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": []
+    },
+    {
+      "county": "Warren",
+      "region": "west",
+      "zip_segments": [
+        {
+          "low": 22630,
+          "high": 22630
+        },
+        {
+          "low": 22640,
+          "high": 22640
+        }
+      ],
+      "hvac": "not_available",
+      "plumbing": "available",
+      "electrical": "subcontracted",
+      "primary_branch": null,
+      "overflow_branch": null,
+      "same_day_blocked": false,
+      "refer_partner": null,
+      "coordination_zips": [
+        22640
+      ]
+    }
+  ],
+  "out_of_area_policy": null,
+  "travel_surcharge_usd": null
+}
