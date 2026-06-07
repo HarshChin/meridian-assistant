@@ -2,7 +2,8 @@
 
 The app is a thin HTTP wrapper around :class:`BookingService`. Domain errors are mapped
 to status codes; the same service is also used in-process (no HTTP) by the tools/eval.
-The mock runs on a :class:`FrozenClock` so the seeded January-2026 bookings stay coherent.
+The mock runs on a :class:`FrozenClock` (the 2026-05-01 demo instant by default) and the seed
+bookings are dated relative to it, so they stay coherent with the CLI/web demo.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
-from meridian.clock import CANONICAL_NOW, Clock, FrozenClock
+from meridian.clock import DEMO_NOW, FrozenClock
 from meridian.config import get_settings
 from meridian.domain.enums import Channel
 from meridian.domain.errors import BookingNotFoundError, InvalidInputError, OwnershipError
@@ -28,12 +29,13 @@ from .service import BookingService
 
 
 def _default_service() -> BookingService:
-    """Build the default service: a frozen clock + a freshly-seeded store."""
-    settings = get_settings()
-    clock: Clock = (
-        FrozenClock(settings.frozen_now) if settings.frozen_now else FrozenClock(CANONICAL_NOW)
-    )
-    return BookingService(clock=clock, store=build_seed_store())
+    """Build the default service for the standalone API: a frozen demo clock + seeded store.
+
+    Defaults to the 2026-05-01 demo clock (overridable via ``MERIDIAN_FROZEN_NOW``) so the
+    standalone ``make api`` server is coherent with the CLI/web demo; the seed dates follow it.
+    """
+    now = get_settings().frozen_now or DEMO_NOW
+    return BookingService(clock=FrozenClock(now), store=build_seed_store(now))
 
 
 def create_app(service: BookingService | None = None) -> FastAPI:

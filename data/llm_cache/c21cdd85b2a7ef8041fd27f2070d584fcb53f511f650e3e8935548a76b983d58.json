@@ -1,0 +1,10 @@
+{
+  "intent": "book",
+  "service_type": "hvac",
+  "zip_code": "22030",
+  "job_type": "repair",
+  "date_phrase": "today",
+  "window": "afternoon",
+  "booking_id": null,
+  "customer_id": null
+}

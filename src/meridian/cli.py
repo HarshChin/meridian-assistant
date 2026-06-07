@@ -20,7 +20,7 @@ from app.seed import build_seed_store
 from app.service import BookingService
 
 from .agent import AgentRunner, TurnResult
-from .clock import CANONICAL_NOW, Clock, FrozenClock, SystemClock
+from .clock import DEMO_NOW, Clock, FrozenClock, SystemClock
 from .domain.enums import Channel
 from .llm.client import LLMClient
 from .retrieval.retriever import HybridRetriever
@@ -30,20 +30,25 @@ DEMO_SCRIPT: list[str] = [
     "What's the difference between the Gold and Platinum maintenance plans?",
     "Is there a surcharge for a Sunday appointment?",
     "There's a burning smell coming from my electrical panel!",
-    "Book an HVAC tune-up at ZIP 22030 for 2026-01-28 in the morning. My customer id is CID-7000.",
-    "Book an electrical repair at ZIP 20147 for 2026-01-29 in the morning. Customer id CID-7001.",
+    "Book an HVAC tune-up at ZIP 22030 for May 15 2026 morning. My customer id is CID-7000.",
+    "Book an electrical repair at ZIP 20147 for May 16 2026 morning. Customer id CID-7001.",
     "What's the status of booking BK-00512883?",
 ]
 """Curated, capability-spanning script for ``--demo`` (knowledge, emergency, booking, status)."""
 
 
 def build_runner(*, frozen_clock: bool = True, channel: Channel = Channel.AGENT) -> AgentRunner:
-    """Wire the agent runner with the in-process Booking double and a clock."""
-    clock: Clock = FrozenClock(CANONICAL_NOW) if frozen_clock else SystemClock()
+    """Wire the agent runner with the in-process Booking double and a clock.
+
+    The demo runs on a frozen 2026-05-01 clock (bookable window 2026-05-01..2026-06-30); the seed
+    bookings are dated relative to that clock so status/reschedule/cancel stay coherent. With
+    ``--system-clock`` the real time is used and the seed follows it too.
+    """
+    clock: Clock = FrozenClock(DEMO_NOW) if frozen_clock else SystemClock()
     return AgentRunner(
         llm=LLMClient(),
         retriever=HybridRetriever.load(),
-        booking_client=BookingService(clock=clock, store=build_seed_store()),
+        booking_client=BookingService(clock=clock, store=build_seed_store(clock.now())),
         clock=clock,
         channel=channel,
     )
@@ -151,8 +156,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--system-clock",
         action="store_true",
-        help="Use the real wall clock instead of the frozen demo clock. Note: the shipped "
-        "seed/demo data is dated January 2026, so this is only coherent with live data.",
+        help="Use the real wall clock instead of the frozen 2026-05-01 demo clock. The seed "
+        "bookings are dated relative to the clock, so this stays coherent with the real date.",
     )
     parser.add_argument(
         "--channel", default="agent", choices=[c.value for c in Channel], help="Inbound channel."

@@ -19,7 +19,12 @@ EASTERN = ZoneInfo("America/New_York")
 """Meridian operates in the US Eastern timezone (branch hours, surcharges)."""
 
 CANONICAL_NOW = datetime(2026, 1, 20, 9, 0, tzinfo=EASTERN)
-"""Canonical demo/eval instant: Tue 2026-01-20 09:00 ET (see PLAN determinism)."""
+"""Canonical EVAL/test instant: Tue 2026-01-20 09:00 ET. Pins the deterministic, keyless eval."""
+
+DEMO_NOW = datetime(2026, 5, 1, 9, 0, tzinfo=EASTERN)
+"""Frozen instant for the interactive CLI/web demo: Fri 2026-05-01 09:00 ET, giving a bookable
+window of 2026-05-01..2026-06-30 (the 60-day horizon). Kept separate from CANONICAL_NOW so the
+eval/tests stay pinned at January; the seed is dated relative to whichever clock is used."""
 
 
 @runtime_checkable

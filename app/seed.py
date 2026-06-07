@@ -1,14 +1,17 @@
 """Deterministic seed bookings for the mock Booking API.
 
-Dates cluster around the canonical instant (2026-01-20). The set covers the example
-from the spec plus the booking IDs referenced by the eval (status / ETA / reschedule /
-PII-ownership / waiver scenarios).
+Dates are anchored RELATIVE to a reference instant (``now``), so the same fixtures stay coherent
+under any clock: the eval/tests use the canonical 2026-01-20 (reproducing the original January
+dates exactly), while the CLI/web demo passes its own clock (e.g. 2026-05-01) and gets matching
+dates. The set covers the spec example plus the booking IDs the eval references (status / ETA /
+reschedule / PII-ownership / waiver scenarios).
 """
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta
 
+from meridian.clock import CANONICAL_NOW
 from meridian.domain.booking import AppointmentWindow
 from meridian.domain.enums import JobType, LookupStatus, ServiceType
 
@@ -19,8 +22,13 @@ def _window(day: date, start: str, end: str) -> AppointmentWindow:
     return AppointmentWindow(date=day, start_time=start, end_time=end)
 
 
-def build_seed_store() -> BookingStore:
-    """Build a freshly-seeded :class:`BookingStore`."""
+def build_seed_store(now: datetime | None = None) -> BookingStore:
+    """Build a freshly-seeded :class:`BookingStore`, dated relative to ``now`` (default Jan 20)."""
+    base = (now or CANONICAL_NOW).date()
+
+    def day(offset: int) -> date:
+        return base + timedelta(days=offset)
+
     store = BookingStore()
     records = [
         # #4 status check — appointment "tomorrow"
@@ -30,7 +38,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.HVAC,
             job_type=JobType.DIAGNOSTIC,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 21), "11:00", "14:00"),
+            appointment_window=_window(day(1), "11:00", "14:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Falls Church",
@@ -44,7 +52,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 21), "10:00", "12:00"),
+            appointment_window=_window(day(1), "10:00", "12:00"),
             status=LookupStatus.CONFIRMED,
             channel="web_chat",
             assigned_branch="Falls Church",
@@ -57,7 +65,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.HVAC,
             job_type=JobType.DIAGNOSTIC,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 20), "10:00", "12:00"),
+            appointment_window=_window(day(0), "10:00", "12:00"),
             status=LookupStatus.EN_ROUTE,
             channel="agent",
             assigned_branch="Falls Church",
@@ -71,7 +79,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.HVAC,
             job_type=JobType.TUNE_UP,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 20), "14:00", "18:00"),
+            appointment_window=_window(day(0), "14:00", "18:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Falls Church",
@@ -84,7 +92,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.HVAC,
             job_type=JobType.TUNE_UP,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 22), "11:00", "14:00"),
+            appointment_window=_window(day(2), "11:00", "14:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Falls Church",
@@ -97,7 +105,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 20), "14:00", "18:00"),
+            appointment_window=_window(day(0), "14:00", "18:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Falls Church",
@@ -110,7 +118,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 20), "14:00", "18:00"),
+            appointment_window=_window(day(0), "14:00", "18:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Falls Church",
@@ -123,7 +131,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.ELECTRICAL,
             job_type=JobType.DIAGNOSTIC,
             zip_code="20814",
-            appointment_window=_window(date(2026, 1, 23), "11:00", "14:00"),
+            appointment_window=_window(day(3), "11:00", "14:00"),
             status=LookupStatus.CONFIRMED,
             channel="agent",
             assigned_branch="Rockville",
@@ -137,7 +145,7 @@ def build_seed_store() -> BookingStore:
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
             zip_code="22032",
-            appointment_window=_window(date(2026, 1, 15), "10:00", "12:00"),
+            appointment_window=_window(day(-5), "10:00", "12:00"),
             status=LookupStatus.COMPLETED,
             channel="agent",
             assigned_branch="Falls Church",

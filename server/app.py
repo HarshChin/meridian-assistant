@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from meridian.agent import AgentRunner, TurnResult
-from meridian.clock import CANONICAL_NOW, FrozenClock
+from meridian.clock import DEMO_NOW, FrozenClock
 from meridian.domain.enums import Channel
 from meridian.llm.client import LLMClient, LLMUnavailableError
 from meridian.retrieval.retriever import HybridRetriever
@@ -50,12 +50,12 @@ class ConfirmIn(BaseModel):
 
 
 def build_web_runner() -> AgentRunner:
-    """Wire the agent runner for the demo (frozen clock, web_chat channel, in-process double)."""
-    clock = FrozenClock(CANONICAL_NOW)
+    """Wire the runner for the demo (frozen 2026-05-01 clock, web_chat channel, in-process)."""
+    clock = FrozenClock(DEMO_NOW)
     return AgentRunner(
         llm=LLMClient(),
         retriever=HybridRetriever.load(),
-        booking_client=BookingService(clock=clock, store=build_seed_store()),
+        booking_client=BookingService(clock=clock, store=build_seed_store(clock.now())),
         clock=clock,
         channel=Channel.WEB_CHAT,
     )

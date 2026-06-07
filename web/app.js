@@ -21,7 +21,7 @@ const SUGGESTIONS = [
   "What's the difference between the Gold and Platinum maintenance plans?",
   "Is there a surcharge for a Sunday appointment?",
   "There's a burning smell coming from my electrical panel!",
-  "Book an HVAC tune-up at ZIP 22030 for 2026-01-28 in the morning. Customer id CID-5000.",
+  "Book an HVAC tune-up at ZIP 22030 for 15th May 2026 in the morning. Customer id CID-5000.",
   "What's the status of booking BK-00512883?",
 ];
 

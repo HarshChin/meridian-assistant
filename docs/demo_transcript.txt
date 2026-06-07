@@ -1,5 +1,5 @@
 Meridian assistant — scripted demo transcript (`make demo` with --trace)
-Deterministic: frozen clock (2026-01-20), temperature 0, replayed from cache.
+Deterministic: frozen clock (2026-05-01), temperature 0, replayed from cache.
 
 === [1] you: What's the difference between the Gold and Platinum maintenance plans?
 
@@ -64,9 +64,9 @@ Is there anything else I can help you with, or would you like to go ahead and bo
 assistant: This sounds like an emergency. Please call our 24/7 emergency line now: 1-800-555-0190. I'm flagging this for immediate human help.
   trace: intent=None route=handoff handoff=emergency
 
-=== [4] you: Book an HVAC tune-up at ZIP 22030 for 2026-01-28 in the morning. My customer id is CID-7000.
+=== [4] you: Book an HVAC tune-up at ZIP 22030 for May 15 2026 morning. My customer id is CID-7000.
 
-assistant: Book hvac (tune_up) at ZIP 22030 on 2026-01-28 (morning).
+assistant: Book hvac (tune_up) at ZIP 22030 on 2026-05-15 (morning).
   sources: service_area_north — Covered ZIP Codes
   trace: intent=book route=confirm tools=[check_service_area] confirm=pending
   [decision: approve]
@@ -76,36 +76,41 @@ assistant: Great news! Your HVAC tune-up has been successfully booked! 🎉
 Here's a summary of your appointment:
 
 - **Booking ID:** BK-90000001
-- **Date:** January 28, 2026
+- **Date:** May 15, 2026
 - **Time Window:** 7:00 AM – 11:00 AM
 - **Assigned Branch:** Falls Church
 - **Technician:** Dana Reyes
 
-No additional fees apply for this booking. If you need to make any changes or have questions before your appointment, don't hesitate to reach out. We look forward to seeing you on the 28th!
+No additional fees apply for this booking. If you need to make any changes or have questions before your appointment, don't hesitate to reach out. We look forward to seeing you on the 15th!
   sources: service_area_north — Covered ZIP Codes
   trace: intent=book route=respond tools=[check_service_area,create_booking*] confirm=approve committed=BK-90000001
 
-=== [5] you: Book an electrical repair at ZIP 20147 for 2026-01-29 in the morning. Customer id CID-7001.
+=== [5] you: Book an electrical repair at ZIP 20147 for May 16 2026 morning. Customer id CID-7001.
 
 assistant: Thank you for reaching out, and I'm sorry for the inconvenience!
 
-Unfortunately, we're currently **unable to service electrical repairs in ZIP code 20147 (Loudoun County)**. Electrical service is not available in that area at this time, and we don't have a referral partner to direct you to for this request.
+Unfortunately, we're currently **unable to service electrical repairs in ZIP code 20147 (Loudoun County)**. Electrical service is not available in that area through our Herndon branch or any overflow branch at this time.
 
-**What we can do:** I'd recommend escalating this to our **Branch Manager** at the Herndon branch, who may be able to explore further options for you.
+**What we can do next:** I'd recommend escalating your request to our **Branch Manager**, who may be able to explore additional options or point you in the right direction. Please don't hesitate to contact us directly so we can connect you with the right person.
 
-Please don't hesitate to reach out if there's anything else we can help you with — we're happy to assist with any other service needs! 😊
+Is there anything else I can help you with, or would you like assistance with a different service or location?
   sources: service_area_north — Covered ZIP Codes
   trace: intent=book route=respond tools=[check_service_area]
 
 === [6] you: What's the status of booking BK-00512883?
 
-assistant: Great news! Here's the latest on your booking:
+assistant: Thanks for reaching out about booking **BK-00512883**! Here's what I can see:
 
-**Booking BK-00512883** — HVAC Diagnostic
+- **Service:** HVAC Diagnostic
+- **Status:** En Route 🚗
+- **Appointment:** May 1, 2026, between **10:00 AM – 12:00 PM**
+- **ETA:** Approximately **12 minutes**
 
-- **Status:** En route 🚗
-- **Appointment Window:** January 20, 2026, 10:00 AM – 12:00 PM
-- **ETA:** Your technician is approximately **12 minutes away**!
+Your technician is on their way! 🎉
 
-Your tech is on their way, so please make sure someone is available to provide access. If you have any questions or need to reach us before they arrive, don't hesitate to ask! 😊
+---
+
+**A quick note on additional details:** The technician's name, appointment notes, and invoice information are protected for your privacy. I'd be happy to share those details once we verify your identity — could you please provide the **customer ID associated with this booking**? Once confirmed, I can share everything right away.
+
+Is there anything else I can help you with?
   trace: intent=booking_status route=respond tools=[lookup_booking]
