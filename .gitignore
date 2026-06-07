@@ -14,8 +14,9 @@ dist/
 # Secrets / local env
 .env
 
-# Internal engineering guide — kept local, not shipped to reviewers
+# Internal docs — kept local, not shipped to reviewers
 CLAUDE.md
+PLAN.md
 
 # OS
 .DS_Store
