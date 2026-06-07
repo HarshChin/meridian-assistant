@@ -1,11 +1,9 @@
-"""Safety guardrails: rules-first emergency detection, injection defense, and loop limits."""
+"""Safety guardrails: rules-first emergency detection and prompt-injection defense."""
 
 from .emergency import EmergencyAssessment, EmergencyCheck, detect_emergency
 from .injection import booking_id_is_grounded, fence_untrusted, find_booking_ids
-from .limits import MAX_TOOL_ITERATIONS
 
 __all__ = [
-    "MAX_TOOL_ITERATIONS",
     "EmergencyAssessment",
     "EmergencyCheck",
     "booking_id_is_grounded",

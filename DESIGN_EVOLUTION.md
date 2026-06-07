@@ -26,7 +26,7 @@ We did not trust "it runs" as evidence. Four independent checks found every issu
    smoke-expectation faithfulness); **every** finding was then independently re-verified against
    the code before we acted. It produced **24 raw findings → 10 confirmed**, including the two most
    important issues below (§3.3 and §3.5), which our own tests had *passed over*.
-4. **The gate.** ruff + mypy + the full test suite (currently 150 tests), with the LLM cache
+4. **The gate.** ruff + mypy + the full test suite (currently 151 tests), with the LLM cache
    committed so the agent *and* the grounded path **replay keyless** and reproduce offline.
 
 The recurring lesson: **a test that encodes a wrong expectation hides the bug.** Two of our
@@ -278,7 +278,7 @@ LangGraph warned on deserialising the trace until we registered its type with th
   emergency case); gating is derived from the **mutating surface** (any book/reschedule/cancel case),
   not an opt-in flag; missing artifacts now **fail** the build instead of skipping; assertion-free
   cases fail; and a new `forbid_contains` grades that withheld PII is never leaked.
-- **Status now.** Categorical, ledger-proven, fail-loud; 20/20, keyless.
+- **Status now.** Categorical, ledger-proven, fail-loud; 22/22, keyless.
 
 ### 5.2 "No technician assigned" for a withheld field → withheld-vs-absent
 - **First approach.** `booking_status` reported "the technician/ETA only if present in the facts".
@@ -411,7 +411,7 @@ pragmatic one. Included because an interviewer is likely to probe "why didn't yo
 - **Agent, eval & demo built (P5–P9)** — LangGraph agent with confirm-before-commit by topology; a
   categorical, ledger-proven eval (emergency recall + confirmation-gating as hard gates that *fail*,
   never skip, when inputs are missing); a CLI and a minimal static web demo reusing the same runner.
-- **Gate green** — ruff + mypy clean; **150 tests** pass; **eval 20/20** (emergency 0/3, gating 0/9,
+- **Gate green** — ruff + mypy clean; **151 tests** pass; **eval 22/22** (emergency 0/3, gating 0/11,
   retrieval recall@5 100%); generalization proven on two unseen encodings.
 
 These are recorded honestly because the most defensible answer to "what did you get wrong?" is a

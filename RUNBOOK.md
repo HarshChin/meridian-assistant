@@ -116,12 +116,12 @@ curl -H "Authorization: Bearer mock-agent-token" http://localhost:8000/v1/bookin
 ## 5. The test gate
 
 ```bash
-python -m pytest                                     # 150 tests
+python -m pytest                                     # 151 tests
 python -m ruff check src tests app eval server       # lint
 python -m mypy src app eval server                   # types
 #   all three at once:  make check
 ```
-**Expect:** `150 passed`; ruff `All checks passed!`; mypy `Success: no issues found`.
+**Expect:** `151 passed`; ruff `All checks passed!`; mypy `Success: no issues found`.
 
 ---
 
@@ -154,7 +154,7 @@ eligibility, fee math) is deterministic code reading compiled facts from `data/e
 > `.env`, so a key sitting there would let a cache miss silently go live. Move `.env` aside and unset
 > `ANTHROPIC_API_KEY`, then run `make eval` / the §6 prompts — they pass with **no key available**
 > (`cases: 22/22`, `emergency: 0/3`, `confirmation-gating: 0/11`, `recall@5 100%/MRR 1.00`; full
-> suite `150 passed`).
+> suite `151 passed`).
 
 ### Want to test a question of your own? Please do.
 

@@ -20,7 +20,13 @@ from ..api_contract import MAX_ADVANCE_DAYS
 from ..clock import EASTERN
 from ..domain.booking import CustomerInfo
 from ..domain.enums import Channel
-from ..guardrails import EmergencyAssessment, EmergencyCheck, detect_emergency, fence_untrusted
+from ..guardrails import (
+    EmergencyAssessment,
+    EmergencyCheck,
+    booking_id_is_grounded,
+    detect_emergency,
+    fence_untrusted,
+)
 from ..knowledge import branches
 from ..knowledge.fees import cancellation_fee
 from ..llm.client import LLMClient, LLMUnavailableError
@@ -245,6 +251,15 @@ class AgentNodes:
         booking_id = slots.get("booking_id")
         if not booking_id:
             return self._clarify("Which booking id (BK-XXXXXXXX) should I update?")
+        # Injection defense (defense-in-depth on top of the capability split): only mutate a
+        # booking id the CUSTOMER supplied in their message, never one that could have arrived
+        # via untrusted retrieved text. An un-grounded id is treated as if none was given, so
+        # injected text can't steer a reschedule/cancel onto an arbitrary booking.
+        if not booking_id_is_grounded(booking_id, [state["user_message"]]):
+            return self._clarify(
+                "I can only change a booking you've given me the id for — could you share the "
+                "booking id (BK-XXXXXXXX) you'd like to update?"
+            )
         # Verify the booking exists before asking for scheduling details — a wrong/unknown id
         # should get "I can't find it", not a date/time-window question.
         look = self._ctx.registry.execute("lookup_booking", {"booking_id": booking_id})

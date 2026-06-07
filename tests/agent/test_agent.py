@@ -12,10 +12,14 @@ from app.seed import build_seed_store
 from app.service import BookingService
 
 from meridian.agent import AgentRunner
+from meridian.agent.nodes import AgentContext, AgentNodes
 from meridian.clock import CANONICAL_NOW, FrozenClock
 from meridian.config import get_settings
+from meridian.domain.enums import Channel
 from meridian.llm.client import LLMClient
 from meridian.retrieval.retriever import HybridRetriever
+from meridian.tools import build_registry
+from meridian.tracing.trace import TurnTrace
 
 _SETTINGS = get_settings()
 pytestmark = pytest.mark.skipif(
@@ -110,3 +114,33 @@ def test_out_of_area_does_not_confirm_or_commit(llm: LLMClient, retriever: Hybri
     assert service.store.mutations == []
     # coverage was actually checked (read-only) before declining
     assert any(c.name == "check_service_area" for c in res.trace.tool_calls)
+
+
+def test_ungrounded_booking_id_is_refused(llm: LLMClient, retriever: HybridRetriever) -> None:
+    """Injection defense (wired into plan_booking): a reschedule/cancel must target a booking id
+    the CUSTOMER supplied in their message. An id that is NOT grounded in the user text (e.g. one
+    that could only have come from injected/retrieved content) is refused before any lookup or
+    mutation — proving the booking_id_is_grounded guardrail is actually enforced, not just defined.
+    """
+    service = BookingService(clock=FrozenClock(CANONICAL_NOW), store=build_seed_store())
+    registry = build_registry(retriever, service, Channel.AGENT)
+    nodes = AgentNodes(AgentContext(llm=llm, registry=registry, channel=Channel.AGENT))
+
+    def _state(message: str) -> dict[str, object]:
+        return {
+            "intent": "cancel",
+            "slots": {"booking_id": "BK-001"},  # a real seeded id…
+            "user_message": message,
+            "now_iso": CANONICAL_NOW.isoformat(),
+            "trace": TurnTrace(channel="agent", user_message=message),
+        }
+
+    # …but the customer never typed it here → un-grounded → ask for the id, do NOT stage a cancel.
+    ungrounded = nodes.plan_booking(_state("Please cancel my booking."))
+    assert ungrounded["route"] == "clarify"
+    assert service.store.mutations == []
+
+    # Control: the SAME id, now grounded in the message, proceeds to confirm-before-commit.
+    grounded = nodes.plan_booking(_state("Please cancel my booking BK-001."))
+    assert grounded["route"] == "confirm"
+    assert service.store.mutations == []  # only staged for confirmation; nothing mutated yet

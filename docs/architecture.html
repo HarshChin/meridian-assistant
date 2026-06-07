@@ -189,7 +189,7 @@
     <div class="card"><h3>llm/</h3><p>Anthropic structured-output client + on-disk <b>record/replay cache</b> (keyless replay).</p></div>
     <div class="card"><h3>tools/</h3><p>READ_ONLY vs MUTATING registry; pydantic arg schemas. Mutating tools run only in <code>commit</code>.</p></div>
     <div class="card"><h3>agent/</h3><p>LangGraph state / nodes / graph / prompts / runner. Per-session checkpoint.</p></div>
-    <div class="card"><h3>guardrails/</h3><p>emergency (rules-first), scope, injection fencing, fee-no-waive, limits.</p></div>
+    <div class="card"><h3>guardrails/</h3><p>emergency (rules-first union) + injection (fence untrusted + booking-id grounding). Scope/abstention live in classify + retrieval; fees are never model-waived (computed by code).</p></div>
     <div class="card"><h3>tracing/</h3><p><code>TurnTrace</code> — the eval contract + per-turn observability log.</p></div>
     <div class="card"><h3>api_client/</h3><p>typed Booking client (HTTP) + the in-process double — one interface.</p></div>
     <div class="card"><h3>app/ <span class="tag t-code">mock API</span></h3><p>FastAPI Booking API + <code>service.py</code> (fees/windows/coverage) + seeded store + mutation ledger.</p></div>
@@ -221,7 +221,7 @@
     <div class="kpi"><b>0 / 3</b><small>emergency misses</small></div>
     <div class="kpi"><b>0 / 11</b><small>gating violations</small></div>
     <div class="kpi"><b>100%</b><small>recall@5 · MRR 1.00</small></div>
-    <div class="kpi"><b>150</b><small>unit/integration tests</small></div>
+    <div class="kpi"><b>151</b><small>unit/integration tests</small></div>
     <div class="kpi"><b>0</b><small>hand-authored facts</small></div>
   </div>
   <p class="note">Generalization is proven separately by a synthetic <i>unseen</i> document that compiles correctly through the unchanged extractor.
