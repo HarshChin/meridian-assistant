@@ -15,7 +15,7 @@ A document-grounded AI contact-center assistant for a mid-market home-services c
 
 The design is judged on three things and built around them: **sustainability** (works on an
 arbitrary corpus, not just the sample), **reproducibility** (keyless, deterministic replay), and
-**generalization** (proven on an unseen synthetic document).
+**generalization** (proven on an unseen synthetic question).
 
 > **▶ To run it, start with [`RUNBOOK.md`](./RUNBOOK.md)** — a copy-paste playbook for the web UI,
 > CLI, eval, Swagger/mock API, and tests, with keyless sample questions to try.
