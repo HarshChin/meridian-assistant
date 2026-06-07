@@ -50,6 +50,24 @@ main {
 .msg.handoff { border-left: 3px solid var(--emergency); }
 .msg.system { align-self: center; color: var(--muted); font-size: 0.82rem; background: none; }
 
+/* "Generating…" typing indicator — animated dots while the assistant is working. */
+.msg.typing { padding: 14px 16px; }
+.msg.typing .dots { display: inline-flex; gap: 5px; align-items: center; }
+.msg.typing .dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted);
+  animation: typing-pulse 1.2s infinite ease-in-out;
+}
+.msg.typing .dots span:nth-child(2) { animation-delay: 0.2s; }
+.msg.typing .dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-pulse {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%           { opacity: 1;    transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .msg.typing .dots span { animation: none; opacity: 0.6; }
+}
+
 .citations { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .cite-chip { font-size: 0.72rem; background: var(--panel-2); border: 1px solid var(--border); color: var(--accent); padding: 2px 8px; border-radius: 10px; }
 

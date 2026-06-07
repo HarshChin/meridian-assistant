@@ -96,10 +96,44 @@ function scroll() {
   window.scrollTo(0, document.body.scrollHeight);
 }
 
+// ---- "Generating…" typing indicator ------------------------------------------------------------
+// A lightweight assistant-style bubble with animated dots, shown while a request is in flight so
+// the user knows an answer is being generated (most visible on live, uncached questions). Created
+// in JS (no markup injected): dots are decorative; role=status + aria-label announce it to readers.
+let typingNode = null;
+
+function showTyping() {
+  if (typingNode) return; // never stack two indicators
+  const bubble = el("div", "msg assistant typing");
+  bubble.setAttribute("role", "status");
+  bubble.setAttribute("aria-label", "Generating answer…");
+  const dots = el("div", "dots");
+  dots.setAttribute("aria-hidden", "true");
+  dots.appendChild(el("span"));
+  dots.appendChild(el("span"));
+  dots.appendChild(el("span"));
+  bubble.appendChild(dots);
+  chat.appendChild(bubble);
+  typingNode = bubble;
+  scroll();
+}
+
+function hideTyping() {
+  if (typingNode) {
+    typingNode.remove();
+    typingNode = null;
+  }
+}
+
 function setBusy(busy) {
   input.disabled = busy;
   sendBtn.disabled = busy;
-  if (!busy) input.focus();
+  if (busy) {
+    showTyping();
+  } else {
+    hideTyping();
+    input.focus();
+  }
 }
 
 async function postJSON(url, body) {
