@@ -94,7 +94,17 @@ over it. Finding and handling them transparently is part of the deliverable.
     lexical match could under-score. Thresholds are tuned on a held-out probe; documented here as
     a deliberate, tunable choice rather than a bug.
 
-15. **The agent's `TurnTrace` is checkpointed as a pydantic object via the in-memory saver.**
-    Under the pinned LangGraph this is fine; moving to a persistent checkpointer (SQLite/Postgres)
-    or a future strict-msgpack default would require registering the type or storing it as a dict.
-    Flagged as a forward-compatibility note, not a current defect.
+15. **The agent's `TurnTrace` is checkpointed as a pydantic object via the in-memory saver.** The
+    trace types are now **registered with the checkpoint serializer**, so a future strict-msgpack
+    default is already handled; moving to a persistent checkpointer (SQLite/Postgres) for production
+    is a config swap behind the same `thread_id` seam. Forward-compatibility note, not a defect.
+
+16. **Each turn is classified in isolation — no multi-turn slot memory yet.** The session
+    checkpointer (keyed by `thread_id`) carries the confirm-before-commit interrupt across turns,
+    but the agent does **not** keep a conversation history or accumulate partial slots: the
+    classifier sees only the latest message and `slots` are replaced (not merged) each turn. So a
+    clarifying follow-up — "book HVAC" → "what's the ZIP?" → "22030" — does not continue the
+    in-progress booking (the customer is expected to state a request in one message; the confirm
+    round-trip itself *is* stateful). This is a deliberate prototype scope: the path-to-production
+    is a per-session `messages` history + slot accumulation across clarify turns on a durable
+    checkpointer — see `docs/path_to_production.md`.

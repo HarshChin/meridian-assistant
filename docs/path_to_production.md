@@ -30,6 +30,17 @@ interfaces*, not a rewrite. What follows is what changes, in priority order.
   constraint**, the waiver ledger a per-customer table — with **no changes above the service
   layer**. The injected `Clock` likewise just switches from the frozen demo instant to the real
   wall clock (no `datetime.now()` is buried in business logic to untangle).
+- **Multi-turn conversation memory.** The agent currently classifies each message **in isolation**:
+  the session checkpointer carries the confirm-before-commit interrupt across turns, but *not* a
+  conversation history or partial slots (the classifier sees only the latest message and `slots` are
+  replaced, not merged, each turn). So a clarifying follow-up — "book HVAC" → "what's the ZIP?" →
+  "22030" — restarts rather than continuing the in-progress booking. Production keeps a per-session
+  `messages` history and **accumulates partial slots across clarify turns** (so the follow-up
+  completes the booking), feeds recent context to the classifier, and runs on a **durable
+  checkpointer** (Redis/Postgres) keyed by the existing session/`thread_id`. The seam is already
+  there — LangGraph already checkpoints per `thread_id` (and resumes the confirmation interrupt that
+  way); production deepens *what* is persisted. (The single-message confirm round-trip is already
+  stateful; it is multi-turn slot-filling that this adds.)
 - Scoped-token rotation + channel-scoped auth (already modelled); **server-side** enum/range/PII
   validation; an in/out **guardrail service** (emergency, injection, fee-no-waive, PII) as a shared
   dependency; idempotency keys on all mutations (already implemented) to close double-confirm races.
