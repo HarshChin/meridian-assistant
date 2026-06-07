@@ -32,7 +32,7 @@ solar panels) — not a greeting.
 Extract when present (else null): service_type (hvac/plumbing/electrical); zip_code (5 digits); \
 job_type; date_phrase = the RAW date wording exactly as written (e.g. "next Wednesday", "the \
 24th", "tomorrow") — do NOT convert it to a calendar date; window (morning/midday/afternoon/ \
-first_available); booking_id (BK followed by 8 digits); customer_id."""
+first_available); booking_id (BK- followed by digits, e.g. BK-003); customer_id."""
 
 ANSWER_SYSTEM = """You are Meridian Home Services' support assistant. Answer the customer's \
 question USING ONLY the provided knowledge passages. After each fact, cite its source inline as \

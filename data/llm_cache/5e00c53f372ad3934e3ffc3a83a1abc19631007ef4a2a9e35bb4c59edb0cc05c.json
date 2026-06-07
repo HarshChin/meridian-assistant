@@ -1,0 +1,10 @@
+{
+  "intent": "cancel",
+  "service_type": null,
+  "zip_code": null,
+  "job_type": null,
+  "date_phrase": null,
+  "window": null,
+  "booking_id": "BK-90000001",
+  "customer_id": null
+}

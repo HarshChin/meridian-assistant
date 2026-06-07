@@ -45,8 +45,8 @@ def test_cancellation_fee_boundaries() -> None:
 
 
 def test_cancel_more_than_24h_is_free() -> None:
-    svc = _svc_at(CANONICAL_NOW)  # Jan-20 09:00; BK-00391042 is Jan-21 11:00 (~26h)
-    resp = svc.modify_booking("BK-00391042", ModifyRequest(action=ModifyAction.CANCEL))
+    svc = _svc_at(CANONICAL_NOW)  # Jan-20 09:00; BK-001 is Jan-21 11:00 (~26h)
+    resp = svc.modify_booking("BK-001", ModifyRequest(action=ModifyAction.CANCEL))
     assert resp.status is ModifyStatus.CANCELLED
     assert resp.fee_applied == 0.0
     assert resp.waiver_used is False
@@ -54,14 +54,14 @@ def test_cancel_more_than_24h_is_free() -> None:
 
 def test_cancel_under_2h_uses_waiver_when_available() -> None:
     svc = _svc_at(datetime(2026, 1, 20, 13, 0, tzinfo=EASTERN))  # 1h before the 14:00 slot
-    resp = svc.modify_booking("BK-00477700", ModifyRequest(action=ModifyAction.CANCEL))
+    resp = svc.modify_booking("BK-006", ModifyRequest(action=ModifyAction.CANCEL))
     assert resp.fee_applied == 0.0
     assert resp.waiver_used is True
 
 
 def test_cancel_under_2h_charges_75_when_waiver_used() -> None:
     svc = _svc_at(datetime(2026, 1, 20, 13, 0, tzinfo=EASTERN))
-    resp = svc.modify_booking("BK-00477777", ModifyRequest(action=ModifyAction.CANCEL))
+    resp = svc.modify_booking("BK-007", ModifyRequest(action=ModifyAction.CANCEL))
     assert resp.fee_applied == 75.0
     assert resp.waiver_used is False
 
@@ -69,7 +69,7 @@ def test_cancel_under_2h_charges_75_when_waiver_used() -> None:
 def test_reschedule_more_than_24h_is_free_with_new_window() -> None:
     svc = _svc_at(CANONICAL_NOW)
     resp = svc.modify_booking(
-        "BK-00400022",
+        "BK-005",
         ModifyRequest(
             action=ModifyAction.RESCHEDULE, new_date=date(2026, 1, 24), new_window=Window.AFTERNOON
         ),
@@ -86,7 +86,7 @@ def test_reschedule_more_than_24h_is_free_with_new_window() -> None:
 def test_same_day_reschedule_to_next_week_is_a_late_cancel() -> None:
     svc = _svc_at(datetime(2026, 1, 20, 13, 0, tzinfo=EASTERN))  # 1h before slot
     resp = svc.modify_booking(
-        "BK-00477777",  # CID-1005 waiver already used -> charged
+        "BK-007",  # CID-1005 waiver already used -> charged
         ModifyRequest(
             action=ModifyAction.RESCHEDULE, new_date=date(2026, 1, 27), new_window=Window.MORNING
         ),
@@ -97,7 +97,7 @@ def test_same_day_reschedule_to_next_week_is_a_late_cancel() -> None:
 def test_same_day_move_is_free() -> None:
     svc = _svc_at(datetime(2026, 1, 20, 13, 0, tzinfo=EASTERN))
     resp = svc.modify_booking(
-        "BK-00477777",
+        "BK-007",
         ModifyRequest(
             action=ModifyAction.RESCHEDULE, new_date=date(2026, 1, 20), new_window=Window.AFTERNOON
         ),
@@ -146,7 +146,7 @@ def _create_body(**overrides: object) -> dict[str, object]:
 
 
 def test_http_requires_token(client: TestClient) -> None:
-    assert client.get("/v1/bookings/BK-00391042").status_code == 401
+    assert client.get("/v1/bookings/BK-001").status_code == 401
 
 
 def test_http_channel_mismatch_is_forbidden(client: TestClient) -> None:
@@ -183,41 +183,41 @@ def test_http_create_beyond_60_days_rejected(client: TestClient) -> None:
 
 
 def test_http_get_with_owner_returns_pii(client: TestClient) -> None:
-    data = client.get("/v1/bookings/BK-00391042?customer_id=CID-1001", headers=AGENT).json()
+    data = client.get("/v1/bookings/BK-001?customer_id=CID-1001", headers=AGENT).json()
     assert data["status"] == "confirmed"
     assert data["tech_name"] == "Dana Reyes"
     assert data["notes"] is not None
 
 
 def test_http_get_en_route_returns_eta(client: TestClient) -> None:
-    data = client.get("/v1/bookings/BK-00512883", headers=AGENT).json()
+    data = client.get("/v1/bookings/BK-003", headers=AGENT).json()
     assert data["status"] == "en_route"
     assert data["tech_eta_minutes"] == 12
 
 
 def test_http_get_confirmed_sibling_has_no_eta(client: TestClient) -> None:
-    data = client.get("/v1/bookings/BK-00512884", headers=AGENT).json()
+    data = client.get("/v1/bookings/BK-004", headers=AGENT).json()
     assert data["status"] == "confirmed"
     assert data["tech_eta_minutes"] is None
 
 
 def test_http_get_not_found(client: TestClient) -> None:
-    assert client.get("/v1/bookings/BK-99999999", headers=AGENT).status_code == 404
+    assert client.get("/v1/bookings/BK-999", headers=AGENT).status_code == 404
 
 
 def test_http_pii_ownership_mismatch_forbidden(client: TestClient) -> None:
-    resp = client.get("/v1/bookings/BK-00399999?customer_id=CID-9999", headers=AGENT)
+    resp = client.get("/v1/bookings/BK-008?customer_id=CID-9999", headers=AGENT)
     assert resp.status_code == 403
 
 
 def test_http_pii_withheld_without_owner(client: TestClient) -> None:
-    data = client.get("/v1/bookings/BK-00399999", headers=AGENT).json()
+    data = client.get("/v1/bookings/BK-008", headers=AGENT).json()
     assert data["status"] == "confirmed"
     assert data["notes"] is None  # PII withheld without ownership
 
 
 def test_http_completed_invoice_is_pii_gated(client: TestClient) -> None:
-    owned = client.get("/v1/bookings/BK-00388000?customer_id=CID-1006", headers=AGENT).json()
+    owned = client.get("/v1/bookings/BK-009?customer_id=CID-1006", headers=AGENT).json()
     assert owned["invoice_total"] == 275.0
-    masked = client.get("/v1/bookings/BK-00388000", headers=AGENT).json()
+    masked = client.get("/v1/bookings/BK-009", headers=AGENT).json()
     assert masked["invoice_total"] is None

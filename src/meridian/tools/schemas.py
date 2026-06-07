@@ -58,7 +58,7 @@ class QuoteFeeArgs(BaseModel):
 class LookupBookingArgs(BaseModel):
     """Arguments for ``lookup_booking``."""
 
-    booking_id: str = Field(description="The booking id, e.g. BK-00391042.")
+    booking_id: str = Field(description="The booking id, e.g. BK-001.")
     customer_id: str | None = Field(
         default=None, description="Provide to unlock PII-gated fields (ownership check)."
     )

@@ -193,7 +193,7 @@ iteration cap · idempotency.
 ### Determinism
 FrozenClock injected (CI grep bans `datetime.now/utcnow/date.today/time.time/Timestamp.now`); global
 `NOW=2026-01-20T09:00 ET` **but `now_override` is mandatory for every fee/boundary case** (a test fails
-if a fee case inherits the canonical clock). Seeded bookings (BK-00391042/00483921/00512883 + en_route
+if a fee case inherits the canonical clock). Seeded bookings (BK-001/BK-002/BK-003 + en_route
 sibling + reschedule target + waiver-used/available pair). Cache-key = SHA(model_id, full messages,
 temp, top_p, max_tokens, tool-schema hash, system-prompt hash); **replay asserts 100% cache-hit**; all
 judge samples cached. "Run-twice-and-diff" CI check.

@@ -60,9 +60,9 @@ def test_booking_requires_confirm_and_commits_only_via_confirm_endpoint() -> Non
     )
     committed = TurnResult(
         kind="answer",
-        message="Booked! BK-00000001.",
+        message="Booked! BK-101.",
         trace=TurnTrace(
-            channel="web_chat", route="respond", committed=True, committed_booking_id="BK-00000001"
+            channel="web_chat", route="respond", committed=True, committed_booking_id="BK-101"
         ),
     )
     runner = _FakeRunner(on_message=pending, on_confirm=committed)
@@ -78,7 +78,7 @@ def test_booking_requires_confirm_and_commits_only_via_confirm_endpoint() -> Non
     second = client.post("/api/sessions/s2/confirm", json={"decision": "approve"}).json()
     assert runner.confirm_calls == [("s2", "approve")]
     assert second["trace"]["committed"] is True
-    assert second["trace"]["committed_booking_id"] == "BK-00000001"
+    assert second["trace"]["committed_booking_id"] == "BK-101"
 
 
 def test_live_call_without_key_returns_503() -> None:

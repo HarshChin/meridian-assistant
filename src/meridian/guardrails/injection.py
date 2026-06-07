@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-_BOOKING_ID_RE = re.compile(r"BK-\d{8}")
+_BOOKING_ID_RE = re.compile(r"BK-\d+")
 
 
 def fence_untrusted(text: str, label: str = "UNTRUSTED_DOCUMENT") -> str:
@@ -36,5 +36,5 @@ def booking_id_is_grounded(booking_id: str, sources: list[str]) -> bool:
 
 
 def find_booking_ids(text: str) -> list[str]:
-    """Return all booking ids (BK-XXXXXXXX) mentioned in ``text``."""
+    """Return all booking ids (BK- followed by digits) mentioned in ``text``."""
     return _BOOKING_ID_RE.findall(text or "")

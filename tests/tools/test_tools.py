@@ -101,10 +101,10 @@ def test_quote_fee_exact_amounts(registry: ToolRegistry) -> None:
 
 def test_lookup_booking_owner_and_not_found(registry: ToolRegistry) -> None:
     owned = registry.execute(
-        "lookup_booking", {"booking_id": "BK-00391042", "customer_id": "CID-1001"}
+        "lookup_booking", {"booking_id": "BK-001", "customer_id": "CID-1001"}
     )
     assert owned.ok and owned.data["status"] == "confirmed" and owned.data["notes"] is not None
-    missing = registry.execute("lookup_booking", {"booking_id": "BK-00000000"})
+    missing = registry.execute("lookup_booking", {"booking_id": "BK-000"})
     assert missing.ok is False and missing.data["error"] == "not_found"
 
 
@@ -123,7 +123,7 @@ def test_create_then_runs_in_commit(registry: ToolRegistry) -> None:
 
 def test_modify_cancel_runs_in_commit(registry: ToolRegistry) -> None:
     result = registry.execute(
-        "modify_booking", {"booking_id": "BK-00391042", "action": "cancel"}, allow_mutations=True
+        "modify_booking", {"booking_id": "BK-001", "action": "cancel"}, allow_mutations=True
     )
     assert result.ok and result.data["status"] == "cancelled" and result.data["fee_applied"] == 0.0
 

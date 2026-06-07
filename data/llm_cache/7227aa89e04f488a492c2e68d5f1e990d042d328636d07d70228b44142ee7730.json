@@ -1,0 +1,10 @@
+{
+  "intent": "book",
+  "service_type": "electrical",
+  "zip_code": "20147",
+  "job_type": "repair",
+  "date_phrase": "May 16 2026",
+  "window": "morning",
+  "booking_id": null,
+  "customer_id": "CID-7001"
+}

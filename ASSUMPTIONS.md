@@ -108,3 +108,9 @@ over it. Finding and handling them transparently is part of the deliverable.
     round-trip itself *is* stateful). This is a deliberate prototype scope: the path-to-production
     is a per-session `messages` history + slot accumulation across clarify turns on a durable
     checkpointer — see `docs/path_to_production.md`.
+
+17. **Booking ids are short and sequential (`BK-001`..`BK-009` seeded, `BK-101+` generated).** The
+    doc-12 spec *example* shows an 8-digit id (`BK-00483921`), but the id is an arbitrary identifier,
+    not a business rule, so we use short, readable ids (easy to read out / type on a call) and the
+    booking-id matcher accepts `BK-` followed by any digits. Swapping the format is a one-line change
+    and changes no behaviour.

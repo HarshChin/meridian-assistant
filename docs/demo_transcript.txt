@@ -75,15 +75,16 @@ assistant: Great news! Your HVAC tune-up has been successfully booked! 🎉
 
 Here's a summary of your appointment:
 
-- **Booking ID:** BK-90000001
+- **Booking ID:** BK-101
 - **Date:** May 15, 2026
 - **Time Window:** 7:00 AM – 11:00 AM
 - **Assigned Branch:** Falls Church
-- **Technician:** Dana Reyes
 
-No additional fees apply for this booking. If you need to make any changes or have questions before your appointment, don't hesitate to reach out. We look forward to seeing you on the 15th!
+No additional fees apply for this booking.
+
+If you need to make any changes or have questions before your appointment, don't hesitate to reach out. We look forward to seeing you on the 15th!
   sources: service_area_north — Covered ZIP Codes
-  trace: intent=book route=respond tools=[check_service_area,create_booking*] confirm=approve committed=BK-90000001
+  trace: intent=book route=respond tools=[check_service_area,create_booking*] confirm=approve committed=BK-101
 
 === [5] you: Book an electrical repair at ZIP 20147 for May 16 2026 morning. Customer id CID-7001.
 
@@ -97,20 +98,16 @@ Is there anything else I can help you with, or would you like assistance with a 
   sources: service_area_north — Covered ZIP Codes
   trace: intent=book route=respond tools=[check_service_area]
 
-=== [6] you: What's the status of booking BK-00512883?
+=== [6] you: What's the status of booking BK-003?
 
-assistant: Thanks for reaching out about booking **BK-00512883**! Here's what I can see:
+assistant: Here's what I can see for booking **BK-003**:
 
 - **Service:** HVAC Diagnostic
 - **Status:** En Route 🚗
-- **Appointment:** May 1, 2026, between **10:00 AM – 12:00 PM**
-- **ETA:** Approximately **12 minutes**
+- **Appointment:** May 1, 2026, between 10:00 AM – 12:00 PM
+- **ETA:** Approximately 12 minutes
 
-Your technician is on their way! 🎉
+Your technician is on their way! However, for your privacy, I'm unable to share the **technician's name**, **appointment notes**, or **invoice details** until we've verified your identity as the account owner.
 
----
-
-**A quick note on additional details:** The technician's name, appointment notes, and invoice information are protected for your privacy. I'd be happy to share those details once we verify your identity — could you please provide the **customer ID associated with this booking**? Once confirmed, I can share everything right away.
-
-Is there anything else I can help you with?
+Could you please provide the **customer ID associated with this booking**? Once verified, I'll be happy to share those additional details right away! 😊
   trace: intent=booking_status route=respond tools=[lookup_booking]

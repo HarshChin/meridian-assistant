@@ -73,7 +73,7 @@ def build_registry(
         Tool(
             name="lookup_booking",
             description=(
-                "Look up an existing booking by id (e.g. BK-00391042). Pass the customer_id to "
+                "Look up an existing booking by id (e.g. BK-001). Pass the customer_id to "
                 "reveal owner-only details such as technician name, notes, and invoice total."
             ),
             capability=Capability.READ_ONLY,

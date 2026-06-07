@@ -69,22 +69,22 @@ def test_http_create_confirmed(http: HttpBookingClient) -> None:
 
 def test_http_not_found_maps_to_domain_error(http: HttpBookingClient) -> None:
     with pytest.raises(BookingNotFoundError):
-        http.get_booking("BK-99999999")
+        http.get_booking("BK-999")
 
 
 def test_http_ownership_mismatch_maps_to_domain_error(http: HttpBookingClient) -> None:
     with pytest.raises(OwnershipError):
-        http.get_booking("BK-00399999", customer_id="CID-9999")
+        http.get_booking("BK-008", customer_id="CID-9999")
 
 
 def test_http_owner_sees_pii(http: HttpBookingClient) -> None:
-    resp = http.get_booking("BK-00391042", customer_id="CID-1001")
+    resp = http.get_booking("BK-001", customer_id="CID-1001")
     assert resp.tech_name == "Dana Reyes"
     assert resp.notes is not None
 
 
 def test_http_pii_withheld_without_owner(http: HttpBookingClient) -> None:
-    resp = http.get_booking("BK-00391042")  # no customer_id -> owner-only PII withheld
+    resp = http.get_booking("BK-001")  # no customer_id -> owner-only PII withheld
     assert resp.tech_name is None
     assert resp.notes is None
 
@@ -99,18 +99,18 @@ def test_http_bad_token_maps_to_domain_error() -> None:
             token="not-a-real-token",
         )
         with pytest.raises(InvalidInputError):
-            client.get_booking("BK-00391042")
+            client.get_booking("BK-001")
 
 
 def test_http_modify_cancel(http: HttpBookingClient) -> None:
-    resp = http.modify_booking("BK-00391042", ModifyRequest(action=ModifyAction.CANCEL))
+    resp = http.modify_booking("BK-001", ModifyRequest(action=ModifyAction.CANCEL))
     assert resp.status is ModifyStatus.CANCELLED
     assert resp.fee_applied == 0.0
 
 
 def test_inprocess_and_http_agree_on_lookup(http: HttpBookingClient) -> None:
-    in_proc = _service().get_booking("BK-00512883")  # en_route seed
-    over_http = http.get_booking("BK-00512883")
+    in_proc = _service().get_booking("BK-003")  # en_route seed
+    over_http = http.get_booking("BK-003")
     assert (in_proc.status, in_proc.tech_eta_minutes) == (
         over_http.status,
         over_http.tech_eta_minutes,

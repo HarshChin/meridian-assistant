@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from meridian.domain.booking import AppointmentWindow, CustomerInfo
 from meridian.domain.enums import JobType, LookupStatus, ServiceType
 
-_ID_SEED = 90_000_000  # generated ids start at BK-90000001; well clear of seeded ids
+_ID_SEED = 100  # generated ids start at BK-101; clear of the BK-001..BK-009 seed
 
 
 @dataclass
@@ -67,7 +67,7 @@ class BookingStore:
     def next_booking_id(self) -> str:
         """Return a fresh deterministic ``BK-XXXXXXXX`` id."""
         self._id_counter += 1
-        return f"BK-{self._id_counter:08d}"
+        return f"BK-{self._id_counter:03d}"
 
     # --- mutation ledger ---
     def record_mutation(self, op: str, booking_id: str) -> None:

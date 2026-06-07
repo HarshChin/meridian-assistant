@@ -32,7 +32,7 @@ DEMO_SCRIPT: list[str] = [
     "There's a burning smell coming from my electrical panel!",
     "Book an HVAC tune-up at ZIP 22030 for May 15 2026 morning. My customer id is CID-7000.",
     "Book an electrical repair at ZIP 20147 for May 16 2026 morning. Customer id CID-7001.",
-    "What's the status of booking BK-00512883?",
+    "What's the status of booking BK-003?",
 ]
 """Curated, capability-spanning script for ``--demo`` (knowledge, emergency, booking, status)."""
 

@@ -52,12 +52,12 @@ def test_fence_untrusted_labels_text() -> None:
 
 
 def test_booking_id_grounding() -> None:
-    assert find_booking_ids("please check BK-00391042 and BK-00483921") == [
-        "BK-00391042",
-        "BK-00483921",
+    assert find_booking_ids("please check BK-001 and BK-002") == [
+        "BK-001",
+        "BK-002",
     ]
-    assert booking_id_is_grounded("BK-00391042", ["I'd like to change BK-00391042"]) is True
-    assert booking_id_is_grounded("BK-99999999", ["only BK-00391042 was looked up"]) is False
+    assert booking_id_is_grounded("BK-001", ["I'd like to change BK-001"]) is True
+    assert booking_id_is_grounded("BK-999", ["only BK-001 was looked up"]) is False
 
 
 def test_turn_trace_records_tool_and_merges_citations() -> None:

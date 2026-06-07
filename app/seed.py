@@ -33,7 +33,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
     records = [
         # #4 status check — appointment "tomorrow"
         BookingRecord(
-            booking_id="BK-00391042",
+            booking_id="BK-001",
             owner_id="CID-1001",
             service_type=ServiceType.HVAC,
             job_type=JobType.DIAGNOSTIC,
@@ -47,7 +47,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # API spec example; #20 references tech "Marcus Webb"
         BookingRecord(
-            booking_id="BK-00483921",
+            booking_id="BK-002",
             owner_id="CID-1002",
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
@@ -60,7 +60,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # #13 tech ETA — en_route with an ETA
         BookingRecord(
-            booking_id="BK-00512883",
+            booking_id="BK-003",
             owner_id="CID-1003",
             service_type=ServiceType.HVAC,
             job_type=JobType.DIAGNOSTIC,
@@ -74,7 +74,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # #13 else-branch sibling — confirmed (not en_route)
         BookingRecord(
-            booking_id="BK-00512884",
+            booking_id="BK-004",
             owner_id="CID-1003",
             service_type=ServiceType.HVAC,
             job_type=JobType.TUNE_UP,
@@ -87,7 +87,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # #5 reschedule target on the 22nd (>24h from canonical now -> no fee)
         BookingRecord(
-            booking_id="BK-00400022",
+            booking_id="BK-005",
             owner_id="CID-1004",
             service_type=ServiceType.HVAC,
             job_type=JobType.TUNE_UP,
@@ -100,7 +100,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # seed-017 same-day 2pm, waiver AVAILABLE -> a <2h reschedule waives the $75
         BookingRecord(
-            booking_id="BK-00477700",
+            booking_id="BK-006",
             owner_id="CID-1010",
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
@@ -113,7 +113,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # ext-017 same-day 2pm, waiver ALREADY USED -> $75 applies
         BookingRecord(
-            booking_id="BK-00477777",
+            booking_id="BK-007",
             owner_id="CID-1005",
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,
@@ -126,7 +126,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # ext-014 PII ownership mismatch on GET
         BookingRecord(
-            booking_id="BK-00399999",
+            booking_id="BK-008",
             owner_id="CID-1000",
             service_type=ServiceType.ELECTRICAL,
             job_type=JobType.DIAGNOSTIC,
@@ -140,7 +140,7 @@ def build_seed_store(now: datetime | None = None) -> BookingStore:
         ),
         # completed booking with an invoice (PII-gated)
         BookingRecord(
-            booking_id="BK-00388000",
+            booking_id="BK-009",
             owner_id="CID-1006",
             service_type=ServiceType.PLUMBING,
             job_type=JobType.REPAIR,

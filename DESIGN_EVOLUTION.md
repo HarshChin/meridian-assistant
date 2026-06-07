@@ -266,8 +266,9 @@ LangGraph warned on deserialising the trace until we registered its type with th
 ### 5.1 An eval that could pass while broken → categorical, ledger-proven, fail-loud  *(found by adversarial review of the eval itself)*
 - **First approach.** The P7 harness asserted intent / route / citations + the two safety invariants.
 - **Why it was wrong.** Reviewing the *eval* adversarially (not just the agent) found four ways it
-  could go green while broken: the lone status assertion `["12"]` was satisfied by the booking id
-  (`BK-005**12**883`) and the `**12**:00 PM` window — not the ETA it claimed to check;
+  could go green while broken: the lone status assertion `["12"]` was satisfied by the appointment
+  window (`**12**:00 PM`) and the date, not just the 12-minute ETA it claimed to check (at the time
+  the seed ids were 8-digit, so `BK-005**12**883` matched too — doubly vacuous);
   confirmation-gating was **opt-in per case**, so a new booking case that forgot a flag was invisible
   to the gate; the emergency *"never book"* half read the agent's **self-reported** trace flag
   (fail-open) instead of the mutation ledger; and the whole gate **skipped to green** if the
