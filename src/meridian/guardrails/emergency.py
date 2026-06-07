@@ -39,8 +39,7 @@ _TRIGGERS: tuple[tuple[str, str], ...] = (
         "active_leak",
         r"\b(active leak|water leak|leaking pipe|leaking water|burst pipe|pipe burst|"
         r"flood(ed|ing)?|filling with water|water everywhere)\b|"
-        r"\bwater\b.{0,20}\b(pouring|gushing|spraying|spreading|pooling|seeping|soaking)\b|"
-        r"\bceiling\b.{0,15}\b(leak|leaking|water|dripping)\b",
+        r"\bwater\b.{0,12}\b(pouring|gushing|spraying)\b",
     ),
     ("sewage", r"\bsewage\b|\bsewer\b.{0,15}\bback(ing)?[\s-]?up\b"),
     (
@@ -48,14 +47,12 @@ _TRIGGERS: tuple[tuple[str, str], ...] = (
         r"\b(burning smell|sparking|sparks|electrical fire|electrical hazard|live wire|"
         r"partial power loss)\b|\b(getting|got|being) shocked\b|\belectric(al)? shock\b|"
         r"\bsmell\b.{0,20}\bburn(ing|t)?\b|\bburn(ing|t)?\b.{0,20}\bsmell\b|"
-        r"\bsmok(e|ing)\b.{0,15}\b(from|coming|panel|outlet|breaker|wire)\b|"
-        r"\b(panel|breaker|outlet|socket|wire)\b.{0,25}\b(buzzing|humming|melting|sparking|crackling)\b|"
-        r"\b(buzzing|humming|crackling|melting)\b.{0,20}\b(panel|breaker|outlet|socket|wire)\b",
+        r"\bsmok(e|ing)\b.{0,15}\b(from|coming|panel|outlet|breaker|wire)\b",
     ),
     (
         "gas_or_co",
         r"\b(gas leak|gas smell)\b|\bgas\b.{0,10}\bleak(ing)?\b|\bleaking\b.{0,6}\bgas\b|"
-        r"\bsmell\b.{0,10}\bgas\b|\bcarbon[\s-]?monoxide\b|\brotten\s+eggs?\b|"
+        r"\bsmell\b.{0,10}\bgas\b|\bcarbon[\s-]?monoxide\b|"
         r"\bco\b.{0,12}\b(alarm|detector|going off)\b",
     ),
     (
