@@ -29,6 +29,13 @@ _WEEKDAYS: dict[str, int] = {
     "sunday": 6,
 }
 
+_MONTHS: dict[str, int] = {
+    "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+    "april": 4, "apr": 4, "may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7,
+    "august": 8, "aug": 8, "september": 9, "sept": 9, "sep": 9, "october": 10, "oct": 10,
+    "november": 11, "nov": 11, "december": 12, "dec": 12,
+}
+
 
 def _parse_hhmm(value: str) -> time:
     """Parse an ``"HH:MM"`` string into a :class:`datetime.time`."""
@@ -74,9 +81,10 @@ def within_advance_window(target: date, now: datetime, max_days: int | None = No
 def resolve_relative_date(text: str, now: datetime) -> date | None:
     """Resolve a date phrase against ``now``; return ``None`` if ambiguous/absent.
 
-    Handles ISO dates, "today", "tomorrow", weekday names ("next Wednesday" /
-    "Wednesday"), and "the Nth". Deliberately returns ``None`` for vague phrases such as
-    "next week" so the agent asks a clarifying question instead of guessing a date.
+    Handles ISO dates, explicit month-name dates ("12th jan 2026", "January 28"), "today",
+    "tomorrow", weekday names ("next Wednesday" / "Wednesday"), and "the Nth". Deliberately
+    returns ``None`` for vague phrases such as "next week" so the agent asks a clarifying
+    question instead of guessing a date.
     """
     s = text.lower()
     today = now.date()
@@ -87,6 +95,10 @@ def resolve_relative_date(text: str, now: datetime) -> date | None:
             return date(int(iso.group(1)), int(iso.group(2)), int(iso.group(3)))
         except ValueError:
             return None
+
+    explicit = _parse_month_name_date(s, today)
+    if explicit is not None:
+        return explicit
 
     if "today" in s:
         return today
@@ -107,6 +119,39 @@ def resolve_relative_date(text: str, now: datetime) -> date | None:
     if dom:
         return _next_date_with_dom(int(dom.group(1)), today)
 
+    return None
+
+
+def _parse_month_name_date(s: str, today: date) -> date | None:
+    """Parse an explicit month-name date: ``"12th jan [2026]"`` or ``"jan 12[th][, 2026]"``.
+
+    Unambiguous because a month NAME is present (no guessing M/D vs D/M). With no year given,
+    returns the next occurrence (this year if not past, else next year). Numeric-only dates like
+    "1/12/2026" are left to the caller (ambiguous) and not parsed here.
+    """
+    names = "|".join(sorted(_MONTHS, key=len, reverse=True))
+    dmy = re.search(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({names})\b\.?(?:\s*,?\s*(\d{{4}}))?", s)
+    mdy = re.search(rf"\b({names})\b\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{{4}}))?", s)
+    if dmy:
+        dom, month, year = int(dmy.group(1)), _MONTHS[dmy.group(2)], dmy.group(3)
+    elif mdy:
+        month, dom, year = _MONTHS[mdy.group(1)], int(mdy.group(2)), mdy.group(3)
+    else:
+        return None
+    if not 1 <= dom <= 31:
+        return None
+    if year:
+        try:
+            return date(int(year), month, dom)
+        except ValueError:
+            return None
+    for candidate_year in (today.year, today.year + 1):  # no year → next occurrence
+        try:
+            candidate = date(candidate_year, month, dom)
+        except ValueError:
+            return None
+        if candidate >= today:
+            return candidate
     return None
 
 

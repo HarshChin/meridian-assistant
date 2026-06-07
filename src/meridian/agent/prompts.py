@@ -55,6 +55,11 @@ assigned.
 - declined: acknowledge that nothing was changed and offer further help.
 If a fee applies, state it plainly."""
 
+CONTACT_SYSTEM = """Extract the customer's CONTACT DETAILS from their message for booking under: \
+name, phone, email, and address. Set a field to null if it is not clearly stated. Do not invent \
+any detail, and do not put a customer id in these fields."""
+
 CLARIFY_SYSTEM = """You are Meridian Home Services' support assistant. You are missing ONE piece \
-of information needed to proceed with the customer's request. Ask ONE short, specific question to \
-get exactly that — do not ask for anything else, and do not guess the missing value."""
+of information needed to proceed with the customer's request. Ask EXACTLY for the missing piece \
+described to you, in one short, specific question — do not substitute a different question, ask \
+for anything else, or guess the missing value."""

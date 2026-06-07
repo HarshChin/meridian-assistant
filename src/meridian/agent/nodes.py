@@ -11,12 +11,14 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from langgraph.types import interrupt
 
+from ..api_contract import MAX_ADVANCE_DAYS
 from ..clock import EASTERN
+from ..domain.booking import CustomerInfo
 from ..domain.enums import Channel
 from ..guardrails import EmergencyAssessment, EmergencyCheck, detect_emergency, fence_untrusted
 from ..knowledge import branches
@@ -25,11 +27,12 @@ from ..llm.client import LLMClient, LLMUnavailableError
 from ..retrieval.confidence import Confidence
 from ..tools import ToolRegistry, ToolResult
 from ..tracing.trace import ToolCallTrace
-from ..windows import resolve_relative_date
+from ..windows import resolve_relative_date, within_advance_window
 from .prompts import (
     ANSWER_SYSTEM,
     CLARIFY_SYSTEM,
     CLASSIFY_SYSTEM,
+    CONTACT_SYSTEM,
     EMERGENCY_SYSTEM,
     RESPOND_SYSTEM,
 )
@@ -199,6 +202,12 @@ class AgentNodes:
                 )
             if resolved is None:
                 return self._clarify("What date would you like the appointment?")
+            if not within_advance_window(resolved, now):
+                limit = (now.date() + timedelta(days=MAX_ADVANCE_DAYS)).isoformat()
+                return self._clarify(
+                    f"The requested date {resolved.isoformat()} isn't bookable — we schedule from "
+                    f"{now.date().isoformat()} up to {limit}; ask for a date in that range."
+                )
             coverage = self._run_tool(
                 state,
                 "check_service_area",
@@ -206,13 +215,23 @@ class AgentNodes:
             )
             if coverage.data.get("eligibility") in ("no", "unknown"):
                 return self._respond("coverage_blocked", {"coverage": coverage.data})
+            customer_id = slots.get("customer_id")
+            # Identity: a customer_id, or contact details (name/phone/email) extracted from the
+            # message. Ask only if neither is present — don't make a customer who already gave
+            # their details repeat them.
+            customer_info = None if customer_id else self._extract_customer_info(state)
+            if not customer_id and not customer_info:
+                return self._clarify(
+                    "Could I get the customer id, or a name and phone number to book under?"
+                )
             args: dict[str, Any] = {
                 "service_type": slots["service_type"],
                 "job_type": slots.get("job_type") or "diagnostic",
                 "zip_code": slots["zip_code"],
                 "preferred_date": resolved.isoformat(),
                 "preferred_window": slots.get("window") or "first_available",
-                "customer_id": slots.get("customer_id"),
+                "customer_id": customer_id,
+                "customer_info": customer_info,
             }
             action = {"tool": "create_booking", "args": args, "coverage": coverage.data}
             preview = (
@@ -263,6 +282,15 @@ class AgentNodes:
             tzinfo=EASTERN
         )
         return cancellation_fee((appt - now).total_seconds() / 3600.0)
+
+    def _extract_customer_info(self, state: AgentState) -> dict[str, Any] | None:
+        """Extract booking contact details from the message when no customer_id was given."""
+        try:
+            info = self._ctx.llm.structured(CONTACT_SYSTEM, state["user_message"], CustomerInfo)
+        except LLMUnavailableError:
+            return None  # keyless with no cached extraction → fall back to asking for identity
+        details = info.model_dump(mode="json", exclude_none=True)
+        return details or None
 
     def clarify(self, state: AgentState) -> dict[str, Any]:
         """Ask the customer one concise question for the missing slot."""

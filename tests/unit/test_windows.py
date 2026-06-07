@@ -35,9 +35,21 @@ def test_relative_dates() -> None:
     assert resolve_relative_date("2026-01-22", NOW) == date(2026, 1, 22)
 
 
+def test_absolute_month_name_dates() -> None:
+    # Customers type explicit dates; a month NAME makes them unambiguous (no M/D vs D/M guessing).
+    assert resolve_relative_date("on 12th jan 2026", NOW) == date(2026, 1, 12)
+    assert resolve_relative_date("for 28th January 2026", NOW) == date(2026, 1, 28)
+    assert resolve_relative_date("January 28 2026", NOW) == date(2026, 1, 28)
+    assert resolve_relative_date("Feb 3rd, 2026", NOW) == date(2026, 2, 3)
+    # No year given -> the next occurrence (this year if not past).
+    assert resolve_relative_date("march 5", NOW) == date(2026, 3, 5)
+
+
 def test_vague_dates_return_none_so_agent_clarifies() -> None:
     assert resolve_relative_date("sometime next week", NOW) is None
     assert resolve_relative_date("whenever works", NOW) is None
+    assert resolve_relative_date("1/12/2026", NOW) is None  # numeric M/D is ambiguous -> clarify
+    assert resolve_relative_date("book me in february", NOW) is None  # month, no day -> clarify
 
 
 def test_advance_window() -> None:
