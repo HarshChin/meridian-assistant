@@ -88,7 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         "--tier",
         default="deterministic",
         choices=["deterministic", "judged"],
-        help="deterministic (keyless CI gate) or judged (adds an LLM groundedness judge).",
+        help="deterministic (keyless CI gate) or judged (scaffolded; currently runs the "
+        "deterministic tier — the LLM groundedness judge is not yet implemented).",
     )
     args = parser.parse_args(argv)
     report = run_eval()

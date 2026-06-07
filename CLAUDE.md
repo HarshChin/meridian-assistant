@@ -76,7 +76,7 @@ src/meridian/
   api_contract.py      Booking API contract constants (doc 12) + federal-holiday stub — NOT facts
   domain/              pure types: enums (mirror the API contract), value objects, errors
   ingestion/           parse (pdfplumber) → chunk → build index   [document-agnostic]
-  retrieval/           embedder, bm25, hybrid (RRF), confidence/abstention, Retriever protocol
+  retrieval/           embedder, bm25, hybrid (RRF), confidence/abstention, swappable VectorStore protocol
   llm/                 Anthropic structured-output client + on-disk response cache (record/replay)
   extraction/          COMPILE-TIME: schemas (capability shapes), extractors (grounded), compile.py
   knowledge/           RUNTIME: loader (reads data/extracted) + coverage/fees/branches (det. logic)
@@ -85,7 +85,10 @@ src/meridian/
   agent/               LangGraph state/nodes/graph/prompts/runner
   guardrails/          emergency (rules-first), scope, injection, fee-no-waive, limits
   tracing/             TurnTrace (the eval contract)
+  cli.py               composition root + interactive REPL + scripted demo driver
 app/                   FastAPI mock Booking API + in-process double (reads data/extracted/fees.json)
+server/                minimal web-demo server (FastAPI shell reusing the runner; optional)
+web/                   static demo page: index.html + app.js + style.css (vanilla JS, no build step)
 eval/                  datasets + harness (retrieval/answer/action metrics + generalization test)
 data/
   corpus/              extracted markdown per doc (regenerable cache; committed for fast clone)
@@ -106,7 +109,8 @@ macOS/Linux use `make <target>`; Windows without make, run the underlying `pytho
 - `make cli` / `make demo-web` — talk to the assistant (CLI; minimal static web demo)
 - `make api` — run the mock Booking API
 - `make test` / `make lint` / `make typecheck` — the gate
-- `make eval` — deterministic eval tier (keyless, CI gate); `make eval-judged` adds the LLM judge
+- `make eval` — deterministic eval tier (keyless, CI gate); `make eval-judged` is reserved for a
+  judged tier (LLM groundedness judge + optional Ragas) that is **scaffolded, not yet implemented**
 
 ## Conventions
 - **Python 3.11**, `src/` layout, pinned deps + committed lockfile.
@@ -130,11 +134,20 @@ to assert a specific new fact. Add a *new kind* of capability = register one ext
 query) in `extraction/` and a loader in `knowledge/` — still zero hand-authored data.
 
 ## Status (kept honest)
-- ✅ Scaffold, deterministic plumbing, mock Booking API (now reads compiled fees), eval-able core.
+- ✅ Scaffold, deterministic plumbing, mock Booking API (reads compiled fees), eval-able core.
 - ✅ Document-agnostic ingestion + structure-aware chunking + hybrid retrieval (RRF) + abstention.
 - ✅ **Knowledge-compilation pipeline**: LLM client (cached), grounded extractors, `make extract`
   → `data/extracted/*.json`; runtime loads compiled records + deterministic logic. **All
-  hand-authored YAML removed.** 84 tests green (incl. coverage edges, compiled-fee/branch values,
-  and the synthetic-document generalization test); ruff + mypy clean.
-- ⏭️ Next: grounded-extraction tools + API client (P4), LangGraph agent (P5), CLI (P6), eval
-  harness (P7), minimal web demo (P8), docs (P9).
+  hand-authored YAML removed.**
+- ✅ Tools + typed API client (P4); LangGraph agent w/ confirm-before-commit by topology (P5);
+  CLI + scripted demo (P6).
+- ✅ **Eval harness (P7)**: categorical safety invariants (emergency recall, confirmation-gating)
+  proven against the mutation ledger + deterministic correctness + retrieval metrics, run as a CI
+  gate that **fails** (not skips) when its committed inputs are missing. Hardened after an
+  adversarial self-review (12 confirmed findings fixed).
+- ✅ **Minimal web demo (P8)**: `server/` (FastAPI shell reusing the runner) + `web/` (vanilla JS,
+  no build step) — citation chips, confirm modal, trace panel; output rendered as text (XSS-safe).
+- ✅ **Docs (P9)**: README (run / design / left-out / debugging methodology), path-to-production,
+  results summary (`eval/results.md`), ASSUMPTIONS + guardrails, DESIGN_EVOLUTION.
+- Current: **149 tests green**; ruff + mypy clean; eval 16/16, emergency 0/3, gating 0/8,
+  recall@5 100%/MRR 1.00; keyless replay verified end-to-end (eval + full suite pass with no key).
