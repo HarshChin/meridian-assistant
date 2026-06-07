@@ -52,9 +52,24 @@ interfaces*, not a rewrite. What follows is what changes, in priority order.
   groundedness/hallucination rate, **handoff rate + reasons**, containment, CSAT, latency, cost,
   drift.
 - The **eval runs in CI as a gate**; the emergency-recall and confirmation-gating invariants are
-  **hard, non-zero-exit** gates. A feedback loop routes thumbs-down turns to a labelling queue that
-  grows the eval set. Canary / A-B rollout with **auto-rollback** on safety-metric regression. A
-  human-review queue is the real-world control behind every abstention.
+  **hard, non-zero-exit** gates. Canary / A-B rollout with **auto-rollback** on safety-metric
+  regression; a human-review queue is the real-world control behind every abstention.
+- **Ragas (+ an LLM-judge tier) for answer quality at scale — added in production, not now.** Ragas
+  ships as an optional, import-guarded `[ragas]` extra and is deliberately kept *out* of the core
+  and the CI gate: a Ragas/LangChain transitive-dependency conflict must never be able to block the
+  **keyless deterministic gate**, on which the prototype's correctness story rests (the deterministic
+  tier + the categorical safety invariants need no extra dependencies and reproduce offline). In
+  production it earns its place as a **continuous, directional** quality signal — Ragas
+  **faithfulness / answer-relevancy / context-precision** over sampled live traffic, alongside a
+  stronger-model groundedness judge — trended on the dashboards and alerted on drift, but **never a
+  hard pass/fail gate** (those stay the deterministic safety invariants). It complements exact
+  fact-match by catching unsupported-but-plausible answers that substring checks can't.
+- **A living eval set fed by real misses.** Any live answer a customer (or a reviewing agent)
+  flags as wrong is routed to the **human-review queue**; a reviewer confirms the failure and records
+  the corrected expected behaviour, and that case — with its source citation and gold answer — is
+  **added to the eval dataset**. Every real-world miss thus becomes a permanent regression test, so
+  the suite grows toward the traffic the assistant actually sees and the same mistake can't silently
+  return.
 
 ## 5. Infrastructure changes from the prototype
 - Managed vector DB (pgvector / Qdrant) keeping the BM25 hybrid; an optional cross-encoder reranker
