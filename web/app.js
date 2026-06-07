@@ -97,10 +97,13 @@ function scroll() {
 }
 
 // ---- "Generating…" typing indicator ------------------------------------------------------------
-// A lightweight assistant-style bubble with animated dots, shown while a request is in flight so
-// the user knows an answer is being generated (most visible on live, uncached questions). Created
-// in JS (no markup injected): dots are decorative; role=status + aria-label announce it to readers.
+// A lightweight assistant-style bubble with animated dots, shown the moment a turn is sent so the
+// user can see an answer is being generated. Created in JS (no markup injected): dots are
+// decorative; role=status + aria-label announce it to screen readers. It stays visible for a short
+// minimum so it's perceptible even when a cached reply comes back almost instantly.
 let typingNode = null;
+let typingShownAt = 0;
+const TYPING_MIN_MS = 500;
 
 function showTyping() {
   if (typingNode) return; // never stack two indicators
@@ -115,10 +118,14 @@ function showTyping() {
   bubble.appendChild(dots);
   chat.appendChild(bubble);
   typingNode = bubble;
+  typingShownAt = Date.now();
   scroll();
 }
 
-function hideTyping() {
+async function hideTyping() {
+  if (!typingNode) return;
+  const remaining = TYPING_MIN_MS - (Date.now() - typingShownAt);
+  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
   if (typingNode) {
     typingNode.remove();
     typingNode = null;
@@ -128,12 +135,7 @@ function hideTyping() {
 function setBusy(busy) {
   input.disabled = busy;
   sendBtn.disabled = busy;
-  if (busy) {
-    showTyping();
-  } else {
-    hideTyping();
-    input.focus();
-  }
+  if (!busy) input.focus();
 }
 
 async function postJSON(url, body) {
@@ -156,10 +158,13 @@ function handleResult(data) {
 async function sendMessage(text) {
   addUser(text);
   setBusy(true);
+  showTyping();
   try {
     const data = await postJSON(`/api/sessions/${SESSION_ID}/messages`, { message: text });
+    await hideTyping(); // remove the indicator before rendering, so the answer doesn't flicker in below it
     handleResult(data);
   } catch (e) {
+    await hideTyping();
     addSystem("Network error — is the demo server running?");
   } finally {
     setBusy(false);
@@ -184,10 +189,13 @@ async function decide(decision) {
   hideConfirm();
   addSystem("You chose to " + decision + ".");
   setBusy(true);
+  showTyping();
   try {
     const data = await postJSON(`/api/sessions/${SESSION_ID}/confirm`, { decision });
+    await hideTyping();
     handleResult(data);
   } catch (e) {
+    await hideTyping();
     addSystem("Network error during confirmation.");
   } finally {
     setBusy(false);
