@@ -245,13 +245,22 @@ class AgentNodes:
         booking_id = slots.get("booking_id")
         if not booking_id:
             return self._clarify("Which booking id (BK-XXXXXXXX) should I update?")
+        # Verify the booking exists before asking for scheduling details — a wrong/unknown id
+        # should get "I can't find it", not a date/time-window question.
+        look = self._ctx.registry.execute("lookup_booking", {"booking_id": booking_id})
+        if not look.ok:
+            return self._clarify(
+                f"I couldn't find a booking with id {booking_id} — could you double-check it?"
+            )
         if intent == "reschedule":
             window = slots.get("window")
             # Window-only reschedule ("move me to the afternoon, same day"): the customer gave a
             # new time window but no new date, so keep the booking's existing date and just change
             # the window. Fall back to asking only if we still can't determine a date or window.
             if resolved is None and window:
-                resolved = self._existing_appointment_date(booking_id)
+                current = look.data.get("appointment_window") or {}
+                if current.get("date"):
+                    resolved = date.fromisoformat(current["date"])
             if resolved is None or not window:
                 return self._clarify(
                     "What new date and time window (morning/midday/afternoon) would you like?"
@@ -284,14 +293,6 @@ class AgentNodes:
                 else " No cancellation fee applies."
             )
         return {"route": "confirm", "proposed_action": action, "confirmation_preview": preview}
-
-    def _existing_appointment_date(self, booking_id: str) -> date | None:
-        """Return a booking's current appointment date (for a window-only reschedule)."""
-        look = self._ctx.registry.execute("lookup_booking", {"booking_id": booking_id})
-        window = look.data.get("appointment_window") if look.ok else None
-        if window and window.get("date"):
-            return date.fromisoformat(window["date"])
-        return None
 
     def _cancel_fee_preview(self, booking_id: str, now: datetime) -> int:
         """Preview the cancellation fee a cancel would incur (read-only; reuses the schedule)."""
