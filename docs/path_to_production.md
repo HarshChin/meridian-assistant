@@ -22,6 +22,14 @@ interfaces*, not a rewrite. What follows is what changes, in priority order.
 ## 3. Hardening (security & correctness)
 - Swap the mock Booking API for the real booking system **behind the same `BookingClient`
   interface** — the agent, tools, and eval don't change.
+- **State & persistence.** The prototype's `BookingStore` is **in-memory** (bookings + the mutation
+  ledger + idempotency keys + the no-show-waiver ledger), seeded fresh per process, so bookings are
+  real and queryable *within a session* but do not survive a restart. Production swaps it for a
+  **durable datastore** (e.g. Postgres) behind the same `BookingService`/`BookingClient` boundary:
+  the mutation ledger becomes the **append-only audit log**, idempotency keys a **unique
+  constraint**, the waiver ledger a per-customer table — with **no changes above the service
+  layer**. The injected `Clock` likewise just switches from the frozen demo instant to the real
+  wall clock (no `datetime.now()` is buried in business logic to untangle).
 - Scoped-token rotation + channel-scoped auth (already modelled); **server-side** enum/range/PII
   validation; an in/out **guardrail service** (emergency, injection, fee-no-waive, PII) as a shared
   dependency; idempotency keys on all mutations (already implemented) to close double-confirm races.
