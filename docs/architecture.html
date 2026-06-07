@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian Assistant — Architecture &amp; Workflow</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#232d38; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2d3742; --accent:#4c9aff;
+    --llm:#3b6fb0; --code:#2f7d52; --mut:#b5562e; --gate:#b59a2e; --halt:#8a3b46; --term:#3a4a5a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;}
+  header{padding:26px 32px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#1a2129,#141a21);}
+  header h1{margin:0;font-size:1.5rem;}
+  header p{margin:6px 0 0;color:var(--muted);max-width:980px;}
+  main{max-width:1180px;margin:0 auto;padding:24px 20px 64px;}
+  h2{font-size:1.15rem;border-left:4px solid var(--accent);padding-left:10px;margin:38px 0 14px;}
+  h2 .n{color:var(--muted);font-weight:400;margin-right:6px;}
+  p.lead{color:var(--muted);margin:0 0 16px;max-width:1000px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  @media(min-width:900px){.grid4{grid-template-columns:repeat(4,1fr);}}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px 15px;}
+  .card h3{margin:0 0 6px;font-size:.95rem;}
+  .card p{margin:0;color:var(--muted);font-size:.82rem;}
+  code{background:#0c1116;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:.82em;color:#cdd9e5;}
+  .tag{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:10px;color:#fff;vertical-align:middle;}
+  .t-llm{background:var(--llm)} .t-code{background:var(--code)} .t-mut{background:var(--mut)}
+  .t-gate{background:var(--gate);color:#1a1500} .t-halt{background:var(--halt)} .t-term{background:var(--term)}
+  /* flow */
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}
+  .legend span{font-size:.74rem;color:var(--muted);display:flex;align-items:center;gap:5px;}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .node{border-radius:9px;padding:9px 13px;border:1px solid var(--line);background:var(--panel2);text-align:center;min-width:150px;max-width:340px;}
+  .node b{display:block;font-size:.9rem;}
+  .node small{color:#cfd9e3;font-size:.74rem;opacity:.85;}
+  .node.llm{border-color:#3b6fb0;background:#1c2a3d;}
+  .node.code{border-color:#2f7d52;background:#16291f;}
+  .node.mut{border-color:#b5562e;background:#2e1d14;}
+  .node.gate{border-color:#b59a2e;background:#2b2613;}
+  .node.halt{border-color:#8a3b46;background:#2c161b;}
+  .node.term{border-color:#445466;background:#1b2531;}
+  .arrow{width:2px;height:16px;background:var(--line);}
+  .arrowlbl{color:var(--muted);font-size:.7rem;margin:3px 0;}
+  .branchrow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:flex-start;width:100%;margin-top:4px;}
+  .lane{flex:1;min-width:185px;max-width:230px;display:flex;flex-direction:column;align-items:center;gap:8px;background:#10161d;border:1px dashed var(--line);border-radius:10px;padding:12px 10px;}
+  .lane .label{font-size:.72rem;color:var(--accent);font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+  .vsep{width:2px;height:10px;background:var(--line);}
+  .side{display:flex;align-items:center;gap:8px;}
+  .sidebranch{font-size:.7rem;color:var(--muted);border-left:2px solid var(--halt);padding-left:7px;}
+  ul.tight{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:.83rem;}
+  ul.tight li{margin:3px 0;}
+  .pipe{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;}
+  .pipe .mid{display:flex;align-items:center;color:var(--muted);font-size:1.5rem;}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 13px;text-align:center;min-width:96px;}
+  .kpi b{display:block;font-size:1.05rem;color:#7fd49a;}
+  .kpi small{color:var(--muted);font-size:.7rem;}
+  .foot{margin-top:34px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line);padding-top:14px;}
+  .note{font-size:.78rem;color:var(--muted);margin-top:8px;}
+  b.k{color:#e6edf3;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Meridian Home Services — AI Contact-Center Assistant</h1>
+  <p>Architecture &amp; request workflow. A document-grounded assistant that answers policy/FAQ questions with citations,
+  runs an agentic ZIP-eligibility → create/reschedule/cancel booking flow with confirm-before-commit, and hands off
+  to a human when unsure, out of scope, or facing an emergency. Built on the three principles it's judged on —
+  <b class="k">sustainability</b>, <b class="k">reproducibility</b>, <b class="k">generalization</b>.</p>
+</header>
+<main>
+
+  <!-- ============ THE BIG IDEA ============ -->
+  <h2><span class="n">1.</span>The core idea — schema is the API, data is compiled from the documents</h2>
+  <p class="lead">No hand-authored business facts. We hand-define only a small, finite set of <b class="k">capability schemas</b>
+  (the <i>shape</i> of a fact — a fee has tiers, coverage has ZIP ranges). Every <b class="k">value</b> (prices, fees, ZIP coverage, hours)
+  is <b class="k">compiled from the documents</b> at build time. At runtime the booking-critical path uses only those compiled records +
+  deterministic code — <b class="k">no LLM or retrieval can change who we book or what we charge.</b> Drop in 1,000 new PDFs, re-run two
+  commands, zero code changes.</p>
+  <div class="pipe">
+    <div class="panel">
+      <h3 style="margin-top:0">⚙️ COMPILE TIME <span class="note">(offline · needs a key only for a cold cache · reproducible)</span></h3>
+      <ul class="tight">
+        <li>ANY PDFs in <code>files/</code> → parse (<code>pdfplumber</code>)</li>
+        <li>→ <b class="k">structure-aware chunks</b> (tables/FAQ/prose kept intact)</li>
+        <li>→ embed (<code>bge-base-en-v1.5</code>, local ONNX) → hybrid index (Chroma + BM25)</li>
+        <li>→ <b class="k">grounded extractors</b> (parent-document retrieval → LLM → validated record)</li>
+        <li>→ <code>data/extracted/{coverage,fees,branches}.json</code> + provenance manifest</li>
+      </ul>
+      <p class="note"><code>make ingest</code> + <code>make extract</code></p>
+    </div>
+    <div class="mid">→</div>
+    <div class="panel">
+      <h3 style="margin-top:0">▶️ RUNTIME <span class="note">(keyless · deterministic)</span></h3>
+      <ul class="tight">
+        <li><b class="k">Open knowledge Q&amp;A</b> → RAG: the LLM answers <i>only</i> from retrieved chunks, with inline <code>[source: …]</code> citations.</li>
+        <li><b class="k">Booking-critical facts</b> → load <code>data/extracted/*.json</code> → <b class="k">deterministic logic</b> (ZIP-range membership, fee tiers, windows). <span class="tag t-code">NO&nbsp;LLM&nbsp;HERE</span></li>
+      </ul>
+      <p class="note">A retrieval glitch can never change eligibility or a fee — only the prose answer.</p>
+    </div>
+  </div>
+
+  <!-- ============ REQUEST LIFECYCLE ============ -->
+  <h2><span class="n">2.</span>Request lifecycle — the LangGraph state machine</h2>
+  <p class="lead">Every turn flows <code>safety → classify → route → … → confirm → commit → respond</code>, with a <code>handoff</code> escape.
+  <b class="k">The LLM classifies intent, extracts raw slots, and phrases replies; code resolves dates, gates coverage, computes fees, and performs the mutation.</b>
+  Confirm-before-commit is guaranteed by the <i>graph topology</i> (the mutating <code>commit</code> node is reachable only after an approved <code>confirm</code>) + a read-only/mutating capability split + the mock API's independent mutation ledger.</p>
+  <div class="legend panel" style="padding:10px 14px;">
+    <span><i class="dot" style="background:var(--llm)"></i> LLM step (Claude, temp 0, cached)</span>
+    <span><i class="dot" style="background:var(--code)"></i> deterministic code</span>
+    <span><i class="dot" style="background:var(--gate)"></i> human confirmation (interrupt)</span>
+    <span><i class="dot" style="background:var(--mut)"></i> mutating (commit-only)</span>
+    <span><i class="dot" style="background:var(--halt)"></i> human handoff / abstain</span>
+    <span><i class="dot" style="background:var(--term)"></i> reply to customer</span>
+  </div>
+
+  <div class="flow panel" style="margin-top:14px;">
+    <div class="node term"><b>Customer message</b></div>
+    <div class="arrow"></div>
+    <div class="side">
+      <div class="node llm"><b>safety</b><small>emergency screen — recall-biased keyword rules <i>first</i>, then an LLM paraphrase union (may only ADD)</small></div>
+      <div class="sidebranch">emergency? →<br><span class="tag t-halt">handoff</span> 24/7 line<br>1-800-555-0190<br>(never a booking)</div>
+    </div>
+    <div class="arrowlbl">▼ not an emergency</div>
+    <div class="node llm"><b>classify</b><small>intent + raw slots (date stays a phrase) · Classification schema</small></div>
+    <div class="arrowlbl">▼ route by intent</div>
+
+    <div class="branchrow">
+      <!-- knowledge -->
+      <div class="lane">
+        <div class="label">knowledge_qa</div>
+        <div class="node llm" style="min-width:0"><b>retrieve</b><small>hybrid BM25 + dense, RRF (k≈15) + confidence band</small></div>
+        <div class="vsep"></div>
+        <div class="sidebranch" style="align-self:stretch">LOW confidence → <span class="tag t-halt">handoff</span></div>
+        <div class="vsep"></div>
+        <div class="node llm" style="min-width:0"><b>answer</b><small>grounded reply; <b>no citation ⇒ abstain → handoff</b></small></div>
+      </div>
+      <!-- status -->
+      <div class="lane">
+        <div class="label">booking_status</div>
+        <div class="node code" style="min-width:0"><b>lookup</b><small>read-only; owner-only PII (tech/notes/invoice) gated on customer_id</small></div>
+        <div class="vsep"></div>
+        <div class="node llm" style="min-width:0"><b>respond</b><small>status / ETA from facts; asks to verify for PII</small></div>
+      </div>
+      <!-- booking -->
+      <div class="lane" style="max-width:300px;border-color:#b59a2e;">
+        <div class="label">book · reschedule · cancel</div>
+        <div class="node code" style="min-width:0"><b>plan_booking</b><small>resolve date in code · <b>check_service_area</b> (ZIP eligibility) · fee preview</small></div>
+        <div class="sidebranch" style="align-self:stretch">missing slot → <span class="tag t-llm">clarify</span> · out-of-area / unknown → <span class="tag t-llm">respond</span></div>
+        <div class="vsep"></div>
+        <div class="node gate" style="min-width:0"><b>confirm ⏸</b><small>INTERRUPT — pause &amp; show the proposed action; wait for approval</small></div>
+        <div class="vsep"></div>
+        <div class="side" style="gap:6px;flex-wrap:wrap;justify-content:center">
+          <div class="node mut" style="min-width:0"><b>commit</b><small>approve → the ONLY mutating call (create / modify)</small></div>
+          <div class="sidebranch">decline →<br>nothing<br>changes</div>
+        </div>
+        <div class="vsep"></div>
+        <div class="node llm" style="min-width:0"><b>respond</b><small>confirm the booking id, window, branch, fee</small></div>
+      </div>
+      <!-- general -->
+      <div class="lane">
+        <div class="label">general</div>
+        <div class="node llm" style="min-width:0"><b>general</b><small>greetings / chit-chat → friendly in-role reply</small></div>
+      </div>
+      <!-- oos -->
+      <div class="lane">
+        <div class="label">out_of_scope</div>
+        <div class="node halt" style="min-width:0"><b>handoff</b><small>off-topic request → connect to a specialist (with context)</small></div>
+      </div>
+    </div>
+    <div class="arrowlbl" style="margin-top:8px">▼ every path ends in a reply + a full <code>TurnTrace</code></div>
+    <div class="node term"><b>Customer reply</b> &nbsp;·&nbsp; citations &nbsp;·&nbsp; decision trace</div>
+  </div>
+
+  <!-- ============ COMPONENTS ============ -->
+  <h2><span class="n">3.</span>Component map</h2>
+  <p class="lead">Dependency direction: <code>domain</code> → <code>app/service</code> (the only owner of fee/window/coverage math) → <code>api_client</code> → <code>tools</code> → <code>agent</code> → <code>eval / server / cli</code>. The library never imports the app; <code>cli.py</code> / <code>server/</code> are the composition roots.</p>
+  <div class="grid4">
+    <div class="card"><h3>ingestion/</h3><p>pdfplumber → structure-aware chunker → build index. Document-agnostic.</p></div>
+    <div class="card"><h3>retrieval/</h3><p>embedder, BM25, hybrid RRF, confidence/abstention. Chroma + NumPy-exact backend.</p></div>
+    <div class="card"><h3>extraction/ <span class="tag t-llm">compile</span></h3><p>capability schemas + grounded extractors → <code>data/extracted/*.json</code>.</p></div>
+    <div class="card"><h3>knowledge/ <span class="tag t-code">runtime</span></h3><p>loaders + coverage / fees / branches — deterministic logic over compiled records.</p></div>
+    <div class="card"><h3>llm/</h3><p>Anthropic structured-output client + on-disk <b>record/replay cache</b> (keyless replay).</p></div>
+    <div class="card"><h3>tools/</h3><p>READ_ONLY vs MUTATING registry; pydantic arg schemas. Mutating tools run only in <code>commit</code>.</p></div>
+    <div class="card"><h3>agent/</h3><p>LangGraph state / nodes / graph / prompts / runner. Per-session checkpoint.</p></div>
+    <div class="card"><h3>guardrails/</h3><p>emergency (rules-first), scope, injection fencing, fee-no-waive, limits.</p></div>
+    <div class="card"><h3>tracing/</h3><p><code>TurnTrace</code> — the eval contract + per-turn observability log.</p></div>
+    <div class="card"><h3>api_client/</h3><p>typed Booking client (HTTP) + the in-process double — one interface.</p></div>
+    <div class="card"><h3>app/ <span class="tag t-code">mock API</span></h3><p>FastAPI Booking API + <code>service.py</code> (fees/windows/coverage) + seeded store + mutation ledger.</p></div>
+    <div class="card"><h3>eval/ · server/ · web/</h3><p>conformance harness; FastAPI shell + static demo page (no build step).</p></div>
+  </div>
+
+  <!-- ============ GUARDRAILS ============ -->
+  <h2><span class="n">4.</span>Safety &amp; guardrails</h2>
+  <div class="grid3">
+    <div class="card"><h3>🚨 Emergency first</h3><p>Recall-biased keyword rules run before anything; an LLM paraphrase-union may only <i>add</i>. Straight to the 24/7 line — never a booking.</p></div>
+    <div class="card"><h3>✋ Confirm before commit</h3><p>Guaranteed by topology + capability split + per-turn assertion, cross-checked by the API's independent <b>mutation ledger</b>.</p></div>
+    <div class="card"><h3>🧷 Grounded or abstain</h3><p>A knowledge answer with no inline citation is not trusted → it hands off rather than state an un-grounded "fact".</p></div>
+    <div class="card"><h3>🔒 PII / ownership gate</h3><p>Technician name, notes, invoice are owner-only — withheld unless a matching <code>customer_id</code> is given (then asks to verify).</p></div>
+    <div class="card"><h3>🛡️ Prompt-injection defense</h3><p>Retrieved text is fenced/labelled untrusted; the mutating split means a successful injection still can't act; web output is escaped.</p></div>
+    <div class="card"><h3>💲 Fees never waived by the model</h3><p>Every figure is computed by code from compiled records; the LLM only phrases it.</p></div>
+  </div>
+
+  <!-- ============ EVAL ============ -->
+  <h2><span class="n">5.</span>Evaluation &amp; reproducibility</h2>
+  <p class="lead">A <b>functional conformance suite</b> run through the <i>real</i> agent over the in-process Booking double, scored on a trust hierarchy.
+  Temperature-0 LLM calls replay from a committed cache, so results reproduce <b>offline, bit-for-bit, keyless</b>.</p>
+  <div class="grid3">
+    <div class="card" style="border-color:#8a3b46"><h3>① Categorical safety <span class="note">(hard gates)</span></h3><p><b>Emergency recall</b> (never miss / never book) and <b>confirmation-gating</b> (no mutation before approval) — proven against the mutation ledger, zero tolerance.</p></div>
+    <div class="card"><h3>② Deterministic correctness</h3><p>Per case: intent · route · kind · action effects (committed?) · citations · fact-substring · PII-not-leaked. Keyless.</p></div>
+    <div class="card"><h3>③ Retrieval quality</h3><p>doc recall@5 + MRR over the knowledge cases.</p></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b>22 / 22</b><small>cases pass</small></div>
+    <div class="kpi"><b>0 / 3</b><small>emergency misses</small></div>
+    <div class="kpi"><b>0 / 11</b><small>gating violations</small></div>
+    <div class="kpi"><b>100%</b><small>recall@5 · MRR 1.00</small></div>
+    <div class="kpi"><b>150</b><small>unit/integration tests</small></div>
+    <div class="kpi"><b>0</b><small>hand-authored facts</small></div>
+  </div>
+  <p class="note">Generalization is proven separately by a synthetic <i>unseen</i> document that compiles correctly through the unchanged extractor.
+  Production adds a judged tier (Ragas + an LLM groundedness judge on sampled live traffic) and a human-review loop that feeds confirmed misses back into the labeled set.</p>
+
+  <div class="foot">
+    <b>Stack:</b> Python 3.11 · LangGraph (state machine + interrupt + per-session checkpointer) · Anthropic Claude (<code>claude-sonnet-4-6</code>, temperature 0, cached record/replay) ·
+    <code>bge-base-en-v1.5</code> local embeddings · Chroma + BM25 (RRF) · FastAPI mock Booking API · pydantic v2 · ruff + mypy + pytest gate.
+    <br><b>Interfaces:</b> CLI (<code>make cli</code> / <code>make demo</code>) · static web demo (<code>make demo-web</code>) · mock API (<code>make api</code>) · eval (<code>make eval</code>).
+    <br><b>Demo data:</b> seeded bookings <code>BK-001…BK-009</code>; created bookings get <code>BK-101+</code>. Demo clock frozen at 2026-05-01 (bookable May 1 – Jun 30); the eval is pinned at 2026-01-20.
+  </div>
+</main>
+</body>
+</html>
