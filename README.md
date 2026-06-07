@@ -17,9 +17,13 @@ The design is judged on three things and built around them: **sustainability** (
 arbitrary corpus, not just the sample), **reproducibility** (keyless, deterministic replay), and
 **generalization** (proven on an unseen synthetic document).
 
+> **▶ To run it, start with [`RUNBOOK.md`](./RUNBOOK.md)** — a copy-paste playbook for the web UI,
+> CLI, eval, Swagger/mock API, and tests, with keyless sample questions to try.
+>
 > Companion docs: [`ASSUMPTIONS.md`](./ASSUMPTIONS.md) (data conflicts + decisions + guardrails),
 > [`DESIGN_EVOLUTION.md`](./DESIGN_EVOLUTION.md) (what we tried, what broke, how we changed it),
-> [`docs/path_to_production.md`](./docs/path_to_production.md), and the generated
+> [`docs/path_to_production.md`](./docs/path_to_production.md),
+> [`docs/architecture.html`](./docs/architecture.html) (visual workflow), and the generated
 > [`eval/results.md`](./eval/results.md).
 
 ---
