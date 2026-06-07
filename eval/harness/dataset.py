@@ -46,6 +46,10 @@ class EvalCase(BaseModel):
     answer_contains: list[str] = Field(
         default_factory=list, description="Normalized facts the reply must contain."
     )
+    forbid_contains: list[str] = Field(
+        default_factory=list,
+        description="Substrings the reply must NOT contain (e.g. owner-only PII when unverified).",
+    )
     forbid_mutation_before_confirm: bool = Field(
         default=False, description="Assert the ledger is empty until the confirmation is approved."
     )

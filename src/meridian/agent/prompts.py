@@ -46,7 +46,12 @@ reserved pending an availability confirmation; status "out_of_area" → apologis
 the service area.)
 - coverage_blocked: explain the ZIP/service isn't currently serviceable; if a referral partner \
 is given, name it; otherwise offer the documented next step (escalate to the Branch Manager).
-- booking_status: report the status, and the technician/ETA only if present in the facts.
+- booking_status: report the status, the appointment date, and the time window. Give the \
+technician name and ETA only when present in the facts. If ownership_verified is false, the \
+owner-only details listed in restricted_pii (technician, notes, invoice) are WITHHELD for the \
+customer's privacy — explain they can be shared once the customer verifies the customer id on the \
+booking, and ask for it. NEVER say a withheld detail is unavailable or that no technician is \
+assigned.
 - declined: acknowledge that nothing was changed and offer further help.
 If a fee applies, state it plainly."""
 

@@ -157,17 +157,26 @@ class AgentNodes:
         return {"final_answer": text, "route": "answer"}
 
     def lookup(self, state: AgentState) -> dict[str, Any]:
-        """Look up an existing booking's status (read-only)."""
+        """Look up a booking's status; owner-only PII is gated on a matching customer_id."""
         slots = state.get("slots", {})
         booking_id = slots.get("booking_id")
         if not booking_id:
             return self._clarify("Which booking id (BK-XXXXXXXX) would you like the status of?")
+        customer_id = slots.get("customer_id")
         result = self._run_tool(
-            state,
-            "lookup_booking",
-            {"booking_id": booking_id, "customer_id": slots.get("customer_id")},
+            state, "lookup_booking", {"booking_id": booking_id, "customer_id": customer_id}
         )
-        return self._respond("booking_status", {"lookup": result.data, "ok": result.ok})
+        data = dict(result.data)
+        verified = bool(customer_id) and result.ok and "error" not in data
+        facts: dict[str, Any] = {"lookup": data, "ok": result.ok, "ownership_verified": verified}
+        if result.ok and not verified:
+            # Owner-only PII (technician name, notes, invoice) is withheld until the customer
+            # verifies the booking's customer id. Drop the withheld nulls so the reply can't
+            # misread them as "not assigned", and flag what needs verification so the reply asks.
+            for field in ("tech_name", "notes", "invoice_total"):
+                data.pop(field, None)
+            facts["restricted_pii"] = ["technician name", "appointment notes", "invoice total"]
+        return self._respond("booking_status", facts)
 
     def plan_booking(self, state: AgentState) -> dict[str, Any]:
         """Resolve slots in code, gate on coverage, and stage a mutating action for confirmation."""

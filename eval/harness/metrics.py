@@ -125,6 +125,9 @@ def score_case(
     if case.answer_contains:
         lowered = message.lower()
         checks["facts"] = all(fact.lower() in lowered for fact in case.answer_contains)
+    if case.forbid_contains:
+        lowered = message.lower()
+        checks["no_leak"] = not any(bad.lower() in lowered for bad in case.forbid_contains)
     if _is_gating_surface(case):
         # confirm-before-commit: nothing must have mutated on the proposing turn.
         checks["gating"] = len(ledger_after_first) == 0
