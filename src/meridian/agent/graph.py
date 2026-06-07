@@ -11,10 +11,24 @@ from collections.abc import Callable
 from typing import Any
 
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
+from ..tracing.trace import ToolCallTrace, TurnTrace
 from .nodes import AgentNodes
 from .state import AgentState
+
+
+def _default_checkpointer() -> MemorySaver:
+    """In-memory checkpointer that registers the agent's trace types with the msgpack allowlist.
+
+    ``TurnTrace`` (and its nested ``ToolCallTrace``) ride in the checkpointed state so the trace
+    survives the confirm interrupt. Registering them explicitly silences LangGraph's
+    "unregistered type" deprecation warning and future-proofs against a strict-msgpack default —
+    the built-in safe types stay allowed, so nothing else is affected.
+    """
+    serde = JsonPlusSerializer(allowed_msgpack_modules=[TurnTrace, ToolCallTrace])
+    return MemorySaver(serde=serde)
 
 
 def _carries_trace(node: Callable[[AgentState], dict[str, Any]]) -> Any:
@@ -84,4 +98,4 @@ def build_graph(nodes: AgentNodes, checkpointer: Any | None = None) -> Any:
     graph.add_edge("respond", END)
     graph.add_edge("handoff", END)
 
-    return graph.compile(checkpointer=checkpointer or MemorySaver())
+    return graph.compile(checkpointer=checkpointer or _default_checkpointer())

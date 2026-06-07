@@ -17,16 +17,16 @@ lock:
 
 # Auto-format and apply safe fixes
 fmt:
-	$(PY) -m ruff format src tests app eval
-	$(PY) -m ruff check --fix src tests app eval
+	$(PY) -m ruff format src tests app eval server
+	$(PY) -m ruff check --fix src tests app eval server
 
 # Lint
 lint:
-	$(PY) -m ruff check src tests app eval
+	$(PY) -m ruff check src tests app eval server
 
 # Static type-check
 typecheck:
-	$(PY) -m mypy src app eval
+	$(PY) -m mypy src app eval server
 
 # Run the test suite
 test:
@@ -51,7 +51,7 @@ api:
 cli:
 	$(PY) -m meridian.cli
 
-# Scripted CLI replay of the 20 seed messages
+# Scripted CLI replay of the curated demo messages (knowledge, emergency, booking, status)
 demo:
 	$(PY) -m meridian.cli --demo
 
@@ -63,6 +63,7 @@ demo-web:
 eval:
 	$(PY) -m eval.harness.runner --tier deterministic
 
-# Full eval incl. Sonnet judge + optional Ragas (needs key or committed cassettes)
+# Judged tier (LLM groundedness judge + optional Ragas) is SCAFFOLDED, not yet implemented;
+# this currently runs the deterministic tier and notes the judge is not wired in.
 eval-judged:
 	$(PY) -m eval.harness.runner --tier judged
