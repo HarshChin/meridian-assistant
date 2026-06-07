@@ -34,6 +34,7 @@ from .prompts import (
     CLASSIFY_SYSTEM,
     CONTACT_SYSTEM,
     EMERGENCY_SYSTEM,
+    GENERAL_SYSTEM,
     RESPOND_SYSTEM,
 )
 from .state import AgentState, Classification
@@ -292,6 +293,13 @@ class AgentNodes:
         details = info.model_dump(mode="json", exclude_none=True)
         return details or None
 
+    def general(self, state: AgentState) -> dict[str, Any]:
+        """Answer a greeting / conversational message in-role (no retrieval, no booking)."""
+        text = self._ctx.llm.complete(GENERAL_SYSTEM, state["user_message"])
+        state["trace"].route = "general"
+        state["trace"].final_answer = text
+        return {"final_answer": text, "route": "general"}
+
     def clarify(self, state: AgentState) -> dict[str, Any]:
         """Ask the customer one concise question for the missing slot."""
         question = state.get("clarify_question", "Could you share a bit more detail?")
@@ -400,6 +408,7 @@ class AgentNodes:
             "book": "plan_booking",
             "reschedule": "plan_booking",
             "cancel": "plan_booking",
+            "general": "general",
             "out_of_scope": "handoff",
         }.get(state.get("intent", "out_of_scope"), "handoff")
 

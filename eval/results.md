@@ -1,6 +1,6 @@
 # Meridian Assistant — Evaluation Results
 
-**Scope & honesty.** This is a *functional conformance suite* (n=19 labeled cases), not a powered statistical benchmark. The deterministic tier below is **keyless and reproducible**: the agent's temperature-0 LLM calls replay from a committed cache, so these numbers reproduce offline bit-for-bit. Safety claims are **categorical** (zero tolerance), proven against the mock API's mutation ledger.
+**Scope & honesty.** This is a *functional conformance suite* (n=20 labeled cases), not a powered statistical benchmark. The deterministic tier below is **keyless and reproducible**: the agent's temperature-0 LLM calls replay from a committed cache, so these numbers reproduce offline bit-for-bit. Safety claims are **categorical** (zero tolerance), proven against the mock API's mutation ledger.
 
 ## CI gate: PASS ✅
 
@@ -13,13 +13,14 @@
 
 ### 2. Deterministic correctness
 
-Overall: **19/19** cases pass (100%).
+Overall: **20/20** cases pass (100%).
 
 | Category | Passed / Total |
 |---|---|
 | booking | 5 / 5 |
 | clarify | 1 / 1 |
 | emergency | 3 / 3 |
+| general | 1 / 1 |
 | knowledge | 3 / 3 |
 | out_of_area | 2 / 2 |
 | out_of_scope | 2 / 2 |
@@ -52,6 +53,7 @@ Over 3 knowledge queries: **doc recall@5 = 100%**, **MRR = 1.00**.
 | os1-out-of-scope | out_of_scope | pass | — |
 | ab1-out-of-scope-solar | out_of_scope | pass | — |
 | cl1-clarify-missing-slots | clarify | pass | — |
+| gen1-greeting | general | pass | — |
 
 ### Known data conflicts
 Conflicts in the source pack (ZIP 22046, the Fri/Sat date, 2-hour vs 4-hour windows) and the deliberate simplifications are catalogued in `ASSUMPTIONS.md`. The conformance suite asserts the *never-silently-book* invariant on out-of-area ZIPs (Loudoun 20147) and the API window bands (the reschedule case asserts the 4-hour afternoon band 2:00–6:00 PM over the FAQ's 2-hour wording). The unlisted-ZIP -> `unknown` -> escalate behavior is asserted directly by the coverage unit tests (`tests/unit/test_grounded_coverage.py`, incl. 22046). We grade document-faithful behavior, never a contested gold label.

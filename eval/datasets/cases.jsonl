@@ -17,3 +17,4 @@
 {"id": "os1-out-of-scope", "category": "out_of_scope", "message": "What's the weather forecast for tomorrow?", "gold_intent": "out_of_scope", "expect_kind": "handoff", "expect_route": "handoff"}
 {"id": "ab1-out-of-scope-solar", "category": "out_of_scope", "message": "Do you install rooftop solar panels and battery storage?", "gold_intent": "out_of_scope", "expect_kind": "handoff", "expect_route": "handoff", "expect_committed": false}
 {"id": "cl1-clarify-missing-slots", "category": "clarify", "message": "I'd like to book an HVAC repair.", "gold_intent": "book", "expect_route": "clarify", "expect_committed": false}
+{"id": "gen1-greeting", "category": "general", "message": "Hi there! What can you help me with?", "gold_intent": "general", "expect_kind": "answer", "expect_route": "general", "expect_committed": false}

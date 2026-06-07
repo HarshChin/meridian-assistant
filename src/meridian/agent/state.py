@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 from ..domain.enums import JobType, ServiceType, Window
 from ..tracing.trace import TurnTrace
 
-Intent = Literal["knowledge_qa", "book", "reschedule", "cancel", "booking_status", "out_of_scope"]
+Intent = Literal[
+    "knowledge_qa", "book", "reschedule", "cancel", "booking_status", "general", "out_of_scope"
+]
 
 
 class Classification(BaseModel):

@@ -57,6 +57,7 @@ def build_graph(nodes: AgentNodes, checkpointer: Any | None = None) -> Any:
     graph.add_node("answer", _carries_trace(nodes.answer))
     graph.add_node("lookup", _carries_trace(nodes.lookup))
     graph.add_node("plan_booking", _carries_trace(nodes.plan_booking))
+    graph.add_node("general", _carries_trace(nodes.general))
     graph.add_node("clarify", _carries_trace(nodes.clarify))
     graph.add_node("confirm", _carries_trace(nodes.confirm))
     graph.add_node("commit", _carries_trace(nodes.commit))
@@ -74,6 +75,7 @@ def build_graph(nodes: AgentNodes, checkpointer: Any | None = None) -> Any:
             "retrieve": "retrieve",
             "lookup": "lookup",
             "plan_booking": "plan_booking",
+            "general": "general",
             "handoff": "handoff",
         },
     )
@@ -94,6 +96,7 @@ def build_graph(nodes: AgentNodes, checkpointer: Any | None = None) -> Any:
     )
     graph.add_edge("commit", "respond")
     graph.add_edge("answer", END)
+    graph.add_edge("general", END)
     graph.add_edge("clarify", END)
     graph.add_edge("respond", END)
     graph.add_edge("handoff", END)

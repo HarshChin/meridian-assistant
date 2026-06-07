@@ -1,0 +1,10 @@
+{
+  "intent": "booking_status",
+  "service_type": null,
+  "zip_code": null,
+  "job_type": null,
+  "date_phrase": null,
+  "window": null,
+  "booking_id": "BK-00483921",
+  "customer_id": "CID-1002"
+}
