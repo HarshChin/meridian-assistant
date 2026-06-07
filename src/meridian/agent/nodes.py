@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from langgraph.types import interrupt
@@ -246,18 +246,32 @@ class AgentNodes:
         if not booking_id:
             return self._clarify("Which booking id (BK-XXXXXXXX) should I update?")
         if intent == "reschedule":
-            if resolved is None or not slots.get("window"):
-                return self._clarify("What new date and time window (morning/midday/afternoon)?")
+            window = slots.get("window")
+            # Window-only reschedule ("move me to the afternoon, same day"): the customer gave a
+            # new time window but no new date, so keep the booking's existing date and just change
+            # the window. Fall back to asking only if we still can't determine a date or window.
+            if resolved is None and window:
+                resolved = self._existing_appointment_date(booking_id)
+            if resolved is None or not window:
+                return self._clarify(
+                    "What new date and time window (morning/midday/afternoon) would you like?"
+                )
+            if not within_advance_window(resolved, now):
+                limit = (now.date() + timedelta(days=MAX_ADVANCE_DAYS)).isoformat()
+                return self._clarify(
+                    f"That date ({resolved.isoformat()}) isn't bookable — we schedule from "
+                    f"{now.date().isoformat()} up to {limit}; what new date would you like?"
+                )
             action = {
                 "tool": "modify_booking",
                 "args": {
                     "booking_id": booking_id,
                     "action": "reschedule",
                     "new_date": resolved.isoformat(),
-                    "new_window": slots["window"],
+                    "new_window": window,
                 },
             }
-            preview = f"Reschedule {booking_id} to {resolved.isoformat()} ({slots['window']})."
+            preview = f"Reschedule {booking_id} to {resolved.isoformat()} ({window})."
         else:  # cancel
             action = {
                 "tool": "modify_booking",
@@ -270,6 +284,14 @@ class AgentNodes:
                 else " No cancellation fee applies."
             )
         return {"route": "confirm", "proposed_action": action, "confirmation_preview": preview}
+
+    def _existing_appointment_date(self, booking_id: str) -> date | None:
+        """Return a booking's current appointment date (for a window-only reschedule)."""
+        look = self._ctx.registry.execute("lookup_booking", {"booking_id": booking_id})
+        window = look.data.get("appointment_window") if look.ok else None
+        if window and window.get("date"):
+            return date.fromisoformat(window["date"])
+        return None
 
     def _cancel_fee_preview(self, booking_id: str, now: datetime) -> int:
         """Preview the cancellation fee a cancel would incur (read-only; reuses the schedule)."""
