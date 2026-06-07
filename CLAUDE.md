@@ -149,5 +149,5 @@ query) in `extraction/` and a loader in `knowledge/` — still zero hand-authore
   no build step) — citation chips, confirm modal, trace panel; output rendered as text (XSS-safe).
 - ✅ **Docs (P9)**: README (run / design / left-out / debugging methodology), path-to-production,
   results summary (`eval/results.md`), ASSUMPTIONS + guardrails, DESIGN_EVOLUTION.
-- Current: **149 tests green**; ruff + mypy clean; eval 16/16, emergency 0/3, gating 0/8,
+- Current: **150 tests green**; ruff + mypy clean; eval 22/22, emergency 0/3, gating 0/11,
   recall@5 100%/MRR 1.00; keyless replay verified end-to-end (eval + full suite pass with no key).

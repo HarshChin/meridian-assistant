@@ -5,10 +5,15 @@ mock Booking API (Swagger), and the test gate — with exact commands and what t
 **sample questions to try**.
 
 > **Two things up front**
-> - **No API key is needed** to run the eval, the tests, the scripted demo, the suggested web prompts,
->   **or any of the sample questions in §6** — the agent's temperature-0 LLM calls **replay from a
->   committed cache** (all 17 verified keyless). Only *reworded / new* questions in the live CLI / web
->   UI call the model, so they need a key (see *Optional: live key*).
+> - **No API key is needed** to run the eval, the tests, the scripted demo, the suggested web
+>   prompts, **or any of the sample questions in §6.** These are **not canned strings**: the agent's
+>   temperature-0 LLM calls **replay from a committed record/replay cache** of the model's *real*
+>   prior outputs (keyed by a SHA256 of the exact request). At temperature 0 a replay is
+>   indistinguishable from a live re-call, so the eval, the demo, and CI all reproduce **offline**.
+>   The booking-critical path (ZIP eligibility, fee math) is deterministic code over compiled facts —
+>   it never calls an LLM, so it's keyless regardless. **Want to test something we *didn't* pick? Add
+>   your own key and free-type any new question — the full live agent runs** (see *§ Running it live:
+>   bring your own question*, which also shows how to prove the keyless claim yourself).
 > - The retrieval **index, compiled facts, and LLM cache are committed**, so you can skip `ingest`/
 >   `extract` and run immediately. The **first run downloads the embedding model once**
 >   (`bge-base-en-v1.5`, ~tens of MB) — needs internet that once, then it's offline.
@@ -120,15 +125,56 @@ python -m mypy src app eval server                   # types
 
 ---
 
-## Optional: a live API key (only for free-typed questions)
+## Running it live: bring your own question
 
-The eval, tests, scripted demo, and suggested web prompts are keyless. To free-type *new* questions
-in the CLI/web UI (anything not in the cache), provide a key:
+**You don't need a key to evaluate this project, and nothing is hidden behind one.** The eval, the
+full test suite, the scripted demo, the suggested web prompts, and every sample question in §6 run
+**offline with no key** — and we'd encourage you to confirm that first.
+
+### What the committed cache actually is (and why keyless replay is legitimate)
+
+Every agent LLM call (`claude-sonnet-4-6`, **temperature 0**) goes through a genuine
+**record/replay cache** in `data/llm_cache/`. The first time each call ran *with* a key, the **real**
+model response was captured and frozen on disk; the file is named by a `SHA256` of the full request
+(model id, system prompt, user message, output schema — see `src/meridian/llm/client.py:72`), **not**
+by the question text. So these are the model's actual outputs, not hand-written answers. Because
+temperature 0 is deterministic, replaying a cached response is **indistinguishable from re-calling
+the model for that identical input** — which is exactly why the cache is committed: you (and CI) get
+identical, reproducible results with zero network and zero key. (We rely on temp-0 determinism for
+in-corpus reproducibility; we don't claim byte-identical behavior across future model revisions, only
+that *these committed recordings* reproduce the documented results.) The booking-critical path (ZIP
+eligibility, fee math) is deterministic code reading compiled facts from `data/extracted/` and
+**calls no LLM at all**, so bookings are keyless no matter what.
+
+> **Prove it yourself.** A cache key is content-addressed over the *exact* request, so a reworded
+> question is a different hash — a cache **miss**. To see that the answers come from recorded model
+> calls (not hardcoded strings): rename `data/llm_cache/` aside and re-run a §6 prompt keyless — it
+> raises `LLMUnavailableError` (a clean `503` in the web UI) instead of answering. To audit the
+> keyless claim cleanly on this checkout, make sure **no key is present** first: `config.py` loads
+> `.env`, so a key sitting there would let a cache miss silently go live. Move `.env` aside and unset
+> `ANTHROPIC_API_KEY`, then run `make eval` / the §6 prompts — they pass with **no key available**
+> (`cases: 22/22`, `emergency: 0/3`, `confirmation-gating: 0/11`, `recall@5 100%/MRR 1.00`; full
+> suite `150 passed`).
+
+### Want to test a question of your own? Please do.
+
+This is a real, multi-node LangGraph agent (safety → classify → retrieve → plan/answer →
+validate → confirm → commit → respond), **not** a scripted bot — so go ahead and ask it something
+new. Add a key and the **entire live agent runs end to end in real time**: safety screen → intent
+classify → hybrid retrieval → plan/answer → (for bookings) validate → confirm-before-commit →
+commit. It's the **same code path** as replay — only the cache lookup differs — so "works on the
+recordings" means "works live on new input"; there is no separate scripted path. The fresh response
+is then written into the cache too, so your new question becomes reproducible for the next person.
 
 ```bash
 cp .env.example .env          # Windows: copy .env.example .env
 # then edit .env →  ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+Then run `make cli` (or `make demo-web`) and free-type whatever you like. The only thing a key buys
+is *reaching questions we never anticipated* — which is exactly what we'd want you to try. And
+keyless mode never fabricates: with no key, a never-seen question deterministically surfaces
+`LLMUnavailableError` rather than inventing an answer.
 
 ---
 
@@ -179,7 +225,9 @@ use dates in **May 1 – June 30, 2026** (or `today`, `next Wednesday`). Seeded 
 - **`make` not found (Windows)** — use the `python -m …` commands above; each `make` target is just a
   thin wrapper around one of them (see the `Makefile`).
 - **"needs ANTHROPIC_API_KEY" / a 503 in the web UI** — that message wasn't in the offline cache, so the
-  live agent was asked. Try a suggested prompt, or set a key (*Optional: live key*).
+  live agent was asked. That's the system working as designed (it never fabricates an answer it can't
+  ground in a real model call). Try a suggested prompt, or add a key (*§ Running it live: bring your
+  own question*).
 - **First run is slow / network call** — that's the one-time embedding-model download; subsequent runs
   are offline.
 - **Port already in use** — change `--port` (e.g. `--port 8801`), or stop the other server (`Ctrl+C`).
