@@ -343,6 +343,25 @@ LangGraph warned on deserialising the trace until we registered its type with th
   too. A frozen clock is a deliberate, fixed instant — "today" resolves to it, not the wall date.
 - **Status now.** Eval untouched + keyless; demo coherent at 2026-05-01 (bookable May 1 – June 30).
 
+### 5.7 Emergency recall only proven on literal triggers → paraphrase recall + a precision floor
+- **First approach.** The emergency suite asserted recall only on *explicit* triggers ("burning
+  smell from my electrical panel"), and there were no hard negatives.
+- **Why it was wrong.** A "0 misses" recall claim over only literal phrasings doesn't show the screen
+  catches **paraphrases** ("water spreading across the floor", "rotten eggs near the furnace", "a
+  buzzing, hot breaker panel"), and a purely recall-biased screen with no precision test could
+  silently over-escalate benign messages — eroding trust and burning the human queue.
+- **How we found it.** Probing "what about unseen/paraphrased questions?" against the recorded eval.
+- **The fix.** Broadened the recall-biased keyword rules to catch those common paraphrases at the
+  rule level (so they're caught **keyless**, not only by the LLM union), and added an eval mini-suite:
+  3 paraphrased positives (now rule-caught) **and** 2 hard negatives (an under-performing AC on a mild
+  day; a "family emergency at work" reschedule) scored for **precision** — a false positive fails the
+  case, but is kept out of the categorical *recall* counter (over-escalating is a UX/cost issue, not a
+  missed emergency). The honest residual: a truly novel wording, run keyless, still relies on the
+  rules; the always-on LLM union (production) is the durable backstop, and confirmed live misses feed
+  the eval (§4 of `path_to_production.md`).
+- **Status now.** Emergency recall **0 misses / 6** (3 literal + 3 paraphrase) and 2 hard negatives
+  not over-flagged; the rule broadening regressed nothing (suite still green).
+
 ---
 
 ## 6. Alternatives we considered and deliberately did *not* adopt (right-sizing)

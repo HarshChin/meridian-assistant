@@ -117,6 +117,11 @@ def score_case(
         # "never book" proven against the mutation ledger, not the agent's self-reported trace
         # flag — a real booking shows up here even if the commit node failed to set committed.
         checks["no_emergency_booking"] = len(ledger_final) == 0
+    elif case.category == "emergency_negative":
+        # Precision: a message that sounds urgent but isn't must NOT be flagged as an emergency.
+        # Scored as deterministic correctness (a false positive fails the case) but kept OUT of the
+        # categorical recall counter — over-flagging is a UX/cost issue, not a missed emergency.
+        checks["emergency"] = bool(trace.get("emergency")) == case.expect_emergency
     if case.expect_committed is not None:
         checks["committed"] = bool(trace.get("committed")) == case.expect_committed
     if case.must_cite:

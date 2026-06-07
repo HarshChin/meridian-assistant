@@ -84,10 +84,16 @@ over it. Finding and handling them transparently is part of the deliverable.
 
 13. **Emergency detection is rules-first + an LLM paraphrase union, screened per message.** A
     recall-biased keyword set (code, doc-11 provenance) runs first; the safety node then adds an
-    LLM paraphrase-catch that may only *add* an emergency, never veto one. We deliberately
-    simplify the threshold-conditional triggers (no-heat below 40°F / no-cooling above 95°F) to
-    phrase matches, and screen only the latest message (a hazard disclosed in an earlier turn is
-    caught when stated, not re-screened on a later follow-up).
+    LLM paraphrase-catch that may only *add* an emergency, never veto one. The keyword set is
+    recall-biased and covers common paraphrases (water spreading/pooling, ceiling leaks, a
+    rotten-egg gas smell, a buzzing/hot breaker panel…), and the eval now measures **both** recall
+    on paraphrased emergencies **and precision** against hard negatives (an under-performing AC on a
+    mild day; a "family emergency at work" reschedule) so the recall bias doesn't silently
+    over-escalate. We deliberately simplify the threshold-conditional triggers (no-heat below 40°F /
+    no-cooling above 95°F) to phrase matches, and screen only the latest message (a hazard disclosed
+    in an earlier turn is caught when stated, not re-screened on a later follow-up). For
+    never-before-seen wordings the keyless path still leans on the keyword rules; the always-on LLM
+    union (production, where a key is always present) is the durable recall backstop.
 
 14. **Agent abstention is keyed on dense-cosine confidence.** The retriever fuses dense + BM25
     (RRF) for ranking, but the HIGH/MEDIUM/LOW abstention band uses the top dense cosine; a purely
