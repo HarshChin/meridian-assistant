@@ -17,16 +17,16 @@ lock:
 
 # Auto-format and apply safe fixes
 fmt:
-	$(PY) -m ruff format src tests app eval server
-	$(PY) -m ruff check --fix src tests app eval server
+	$(PY) -m ruff format src tests app eval server scripts
+	$(PY) -m ruff check --fix src tests app eval server scripts
 
 # Lint
 lint:
-	$(PY) -m ruff check src tests app eval server
+	$(PY) -m ruff check src tests app eval server scripts
 
 # Static type-check
 typecheck:
-	$(PY) -m mypy src app eval server
+	$(PY) -m mypy src app eval server scripts
 
 # Run the test suite
 test:

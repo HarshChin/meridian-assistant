@@ -116,12 +116,24 @@ curl -H "Authorization: Bearer mock-agent-token" http://localhost:8000/v1/bookin
 ## 5. The test gate
 
 ```bash
-python -m pytest                                     # 151 tests
-python -m ruff check src tests app eval server       # lint
-python -m mypy src app eval server                   # types
+python -m pytest                                       # 151 tests
+python -m ruff check src tests app eval server scripts # lint
+python -m mypy src app eval server scripts             # types
 #   all three at once:  make check
 ```
 **Expect:** `151 passed`; ruff `All checks passed!`; mypy `Success: no issues found`.
+
+### Peek under the hood: what the retriever actually returned
+
+To see the exact chunks behind an answer's `sources:` — their citation tokens, fused RRF score,
+dense cosine, and full text — run the retrieval directly (keyless; embeddings are local):
+
+```bash
+python scripts/show_retrieval.py "Is there a surcharge for a Sunday appointment?"
+python scripts/show_retrieval.py "no-show fee" --k 3 --chars 200   # top-3, truncate text
+```
+Each line's `[doc vX.Y §Section]` is the same citation token the assistant cites — so you can trace
+any answer straight to the chunk text it was grounded in.
 
 ---
 
